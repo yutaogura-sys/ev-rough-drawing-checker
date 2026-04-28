@@ -1734,7 +1734,7 @@ document.querySelectorAll('.tab-btn').forEach(b => {
 function downloadReport() {
   const data = {
     tool: 'ラフ図チェックツール',
-    version: '1.0',
+    version: '1.1',
     exportedAt: new Date().toISOString(),
     project: state.project,
     judgements: state.judgements,
@@ -1742,7 +1742,10 @@ function downloadReport() {
     routes: state.routes,
     cost: state.cost,
     comment: state.comment,
+    aiSources: state.aiSources || {},      // AI判定の出所
+    aiAnalyzedAt: state.aiAnalyzedAt || null,
     summary: getSummary()
+    // 注：APIキーは別localStorageに保管されており、JSONには含めない（漏洩防止）
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -1947,12 +1950,18 @@ window.removeAIFile = function(idx) {
 // --- ファイル追加 ---
 async function addAIFiles(files) {
   let totalAfter = aiFiles.reduce((s, f) => s + f.size, 0);
+  const MAX_PER_FILE = 20 * 1024 * 1024;  // Gemini inline制限
+  const MAX_TOTAL    = 30 * 1024 * 1024;  // 全体目安
   for (const f of files) {
-    if (!f.type.match(/^(application\/pdf|image\/)/)) {
-      toast(`${f.name} は対応外形式です`);
+    if (!f.type.match(/^(application\/pdf|image\/(png|jpeg|jpg|webp))$/)) {
+      toast(`${f.name} は対応外形式（PDF/PNG/JPG/WEBPのみ）`);
       continue;
     }
-    if (totalAfter + f.size > 30 * 1024 * 1024) {
+    if (f.size > MAX_PER_FILE) {
+      toast(`${f.name} は20MBを超えています（Gemini inline制限）`);
+      continue;
+    }
+    if (totalAfter + f.size > MAX_TOTAL) {
       toast('合計30MBを超えるためスキップしました');
       break;
     }
@@ -2080,21 +2089,23 @@ async function callGemini() {
     });
   }
 
+  // Gemini APIは Type 列挙でUPPERCASE想定（OpenAPI互換のproto定義）
   const responseSchema = {
-    type: "object",
+    type: "OBJECT",
     properties: {
       results: {
-        type: "array",
+        type: "ARRAY",
         items: {
-          type: "object",
+          type: "OBJECT",
           properties: {
-            id:         { type: "string",  description: "項目ID（例: ha01）" },
-            judgement:  { type: "string",  enum: ["ok", "warn", "ng", "na"] },
-            confidence: { type: "number",  description: "信頼度 0.0-1.0" },
-            evidence:   { type: "string",  description: "添付資料のどこから判断したか" },
-            note:       { type: "string",  description: "備考・申し送り事項" }
+            id:         { type: "STRING", description: "項目ID（例: ha01）" },
+            judgement:  { type: "STRING", enum: ["ok", "warn", "ng", "na"] },
+            confidence: { type: "NUMBER", description: "信頼度 0.0-1.0" },
+            evidence:   { type: "STRING", description: "添付資料のどこから判断したか" },
+            note:       { type: "STRING", description: "備考・申し送り事項" }
           },
-          required: ["id", "judgement", "confidence", "evidence", "note"]
+          required: ["id", "judgement", "confidence", "evidence", "note"],
+          propertyOrdering: ["id", "judgement", "confidence", "evidence", "note"]
         }
       }
     },
@@ -2158,13 +2169,24 @@ async function runAIAnalysis() {
     const data = await callGemini();
     clearInterval(interval);
 
+    // 安全停止理由をチェック
+    const finishReason = data.candidates?.[0]?.finishReason;
+    if (finishReason && finishReason !== 'STOP' && finishReason !== 'MAX_TOKENS') {
+      throw new Error(`AIが応答を中断しました（理由: ${finishReason}）。コンテンツポリシーまたはセーフティ設定をご確認ください。`);
+    }
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) throw new Error('AIからのレスポンスが空です（コンテンツポリシーで遮断された可能性）');
 
     let parsed;
+    // 念のためmarkdownコードフェンスを除去（responseMimeType:application/json指定時は通常不要）
+    let cleanText = text.trim();
+    if (cleanText.startsWith('```')) {
+      cleanText = cleanText.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, '');
+    }
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(cleanText);
     } catch (e) {
+      console.error('JSON parse failure. Raw text:', text);
       throw new Error('AIレスポンスのJSONパース失敗: ' + e.message);
     }
     const results = parsed.results || [];
@@ -2291,10 +2313,13 @@ window.toggleAIDetails = function() {
   }
 };
 
-// 解析ボタン配線
-document.addEventListener('DOMContentLoaded', () => {});
+// 解析ボタン配線（scriptはbody末尾なのでDOM準備済み）
 const _analyzeBtn = document.getElementById('analyze-btn');
-if (_analyzeBtn) _analyzeBtn.addEventListener('click', runAIAnalysis);
+if (_analyzeBtn) {
+  _analyzeBtn.addEventListener('click', runAIAnalysis);
+} else {
+  console.warn('analyze-btn 要素が見つかりません');
+}
 
 // 初期セットアップ
 setupAISettings();
