@@ -1,0 +1,17 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Node (なし想定だが念のため)
+node_modules/
+
+# 機密素材は本リポジトリに含めない
+素材/
+*.pdf

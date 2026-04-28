@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ラフ図チェックツール｜EV充電設備 補助金申請</title>
+<style>
+  :root {
+    --color-primary: #c8102e;
+    --color-primary-dark: #8b0a1f;
+    --color-bg: #f5f6f8;
+    --color-card: #ffffff;
+    --color-text: #1f2933;
+    --color-muted: #6b7785;
+    --color-border: #d6dbe1;
+    --color-ok: #16a34a;
+    --color-warn: #f59e0b;
+    --color-ng: #dc2626;
+    --color-na: #94a3b8;
+    --color-info: #2563eb;
+    --color-haisen: #fff8e1;
+    --color-haisen-border: #f59e0b;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.6;
+    font-size: 14px;
+  }
+
+  /* ヘッダー */
+  header.app-header {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    color: #fff;
+    padding: 18px 28px;
+    box-shadow: var(--shadow-md);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .app-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .app-header .subtitle {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-top: 2px;
+  }
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .score-summary {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .score-pill {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    backdrop-filter: blur(6px);
+  }
+  .score-pill .num { font-size: 18px; }
+  .judgement-pill {
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 13px;
+    background: #fff;
+    color: var(--color-primary);
+  }
+  .judgement-pill.ok { color: var(--color-ok); }
+  .judgement-pill.warn { color: var(--color-warn); }
+  .judgement-pill.ng { color: var(--color-ng); }
+
+  /* メイン */
+  main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px 28px 80px;
+  }
+
+  /* 案件情報 */
+  .project-info {
+    background: var(--color-card);
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
+    border: 1px solid var(--color-border);
+  }
+  .project-info h2 {
+    margin: 0 0 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+    border-left: 4px solid var(--color-primary);
+    padding-left: 10px;
+  }
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px 16px;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+  }
+  .field label {
+    font-size: 12px;
+    color: var(--color-muted);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .field input, .field select, .field textarea {
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    transition: border-color 0.15s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(200,16,46,0.12);
+  }
+
+  /* タブ */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 18px;
+    overflow-x: auto;
+    background: var(--color-card);
+    padding: 6px;
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+  }
+  .tab-btn {
+    flex: 1 1 auto;
+    background: transparent;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-muted);
+    white-space: nowrap;
+    transition: all 0.15s;
+    min-width: 110px;
+    position: relative;
+  }
+  .tab-btn:hover { background: var(--color-bg); color: var(--color-text); }
+  .tab-btn.active {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  .tab-btn .tab-score {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 11px;
+    background: rgba(255,255,255,0.25);
+    padding: 1px 6px;
+    border-radius: 999px;
+  }
+  .tab-btn:not(.active) .tab-score {
+    background: var(--color-bg);
+    color: var(--color-muted);
+  }
+  .tab-btn.haisen {
+    border: 2px solid var(--color-haisen-border);
+  }
+  .tab-btn.haisen.active {
+    background: var(--color-haisen-border);
+  }
+
+  /* セクション */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .section-card {
+    background: var(--color-card);
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 16px;
+    border: 1px solid var(--color-border);
+  }
+  .section-card.haisen-emphasis {
+    background: var(--color-haisen);
+    border-left: 5px solid var(--color-haisen-border);
+  }
+  .section-card h3 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-card h3 .badge {
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+  .section-card h3 .badge.warn { background: var(--color-warn); }
+  .section-card h3 .badge.info { background: var(--color-info); }
+  .section-card .desc {
+    font-size: 12px;
+    color: var(--color-muted);
+    margin-bottom: 14px;
+  }
+
+  /* チェック項目 */
+  .check-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--color-border);
+    align-items: start;
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-item .item-text {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .check-item .item-text .important {
+    display: inline-block;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-right: 6px;
+    font-weight: 700;
+  }
+  .check-item .item-text .important.haisen {
+    background: var(--color-haisen-border);
+  }
+  .check-item .hint {
+    display: block;
+    font-size: 11px;
+    color: var(--color-muted);
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+  .check-item .actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  /* 判定ボタン */
+  .judge-btn {
+    border: 1px solid var(--color-border);
+    background: #fff;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    color: var(--color-muted);
+    transition: all 0.1s;
+    min-width: 36px;
+  }
+  .judge-btn:hover { background: var(--color-bg); }
+  .judge-btn.active.ok { background: var(--color-ok); color: #fff; border-color: var(--color-ok); }
+  .judge-btn.active.warn { background: var(--color-warn); color: #fff; border-color: var(--color-warn); }
+  .judge-btn.active.ng { background: var(--color-ng); color: #fff; border-color: var(--color-ng); }
+  .judge-btn.active.na { background: var(--color-na); color: #fff; border-color: var(--color-na); }
+
+  .item-note {
+    grid-column: 1 / -1;
+    width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    margin-top: 6px;
+    background: #fafbfc;
+    resize: vertical;
+    min-height: 36px;
+  }
+  .item-note:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: #fff;
+  }
+
+  /* ルート区間表 */
+  .route-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 12px;
+  }
+  .route-table th, .route-table td {
+    border: 1px solid var(--color-border);
+    padding: 6px 8px;
+    text-align: left;
+  }
+  .route-table th {
+    background: #f8f9fb;
+    font-weight: 600;
+    font-size: 11px;
+    color: var(--color-muted);
+  }
+  .route-table input, .route-table select {
+    width: 100%;
+    border: none;
+    padding: 4px 6px;
+    font-size: 12px;
+    background: transparent;
+    font-family: inherit;
+  }
+  .route-table input:focus, .route-table select:focus {
+    outline: 2px solid var(--color-primary);
+    background: #fff;
+  }
+  .route-table .num-cell { text-align: right; }
+  .route-table .row-action {
+    text-align: center;
+    width: 30px;
+  }
+  .route-table .del-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-ng);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+  }
+  .route-table tfoot td {
+    background: #f8f9fb;
+    font-weight: 700;
+  }
+  .add-row-btn {
+    margin-top: 8px;
+    background: #fff;
+    border: 1px dashed var(--color-border);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--color-muted);
+    font-family: inherit;
+  }
+  .add-row-btn:hover {
+    border-style: solid;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  /* 料金パネル */
+  .cost-panel {
+    background: linear-gradient(135deg, #fff7ed 0%, #fff1dd 100%);
+    border: 1px solid #fdba74;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-top: 16px;
+  }
+  .cost-panel.warning {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #f59e0b;
+  }
+  .cost-panel.danger {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-color: var(--color-ng);
+  }
+  .cost-panel h4 {
+    margin: 0 0 8px;
+    font-size: 14px;
+  }
+  .cost-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 13px;
+  }
+  .cost-row.total {
+    border-top: 1px solid rgba(0,0,0,0.1);
+    margin-top: 6px;
+    padding-top: 8px;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .cost-bar {
+    width: 100%;
+    height: 8px;
+    background: #fff;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 8px;
+    border: 1px solid var(--color-border);
+  }
+  .cost-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #16a34a, #f59e0b 80%, #dc2626);
+    transition: width 0.3s;
+  }
+  .cost-alert {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .cost-alert.warn {
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    color: #92400e;
+  }
+  .cost-alert.danger {
+    background: #fee2e2;
+    border: 1px solid var(--color-ng);
+    color: #991b1b;
+  }
+  .cost-alert.danger .yen-over {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--color-ng);
+  }
+
+  /* 判定結果 */
+  .result-card {
+    background: var(--color-card);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+  }
+  .result-card.ok { border-color: var(--color-ok); }
+  .result-card.warn { border-color: var(--color-warn); }
+  .result-card.ng { border-color: var(--color-ng); }
+
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .result-status {
+    font-size: 22px;
+    font-weight: 800;
+  }
+  .result-status.ok { color: var(--color-ok); }
+  .result-status.warn { color: var(--color-warn); }
+  .result-status.ng { color: var(--color-ng); }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .result-tile {
+    background: var(--color-bg);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .result-tile .label {
+    font-size: 11px;
+    color: var(--color-muted);
+    margin-bottom: 4px;
+  }
+  .result-tile .value {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .result-tile.haisen {
+    background: var(--color-haisen);
+    border: 1px solid var(--color-haisen-border);
+  }
+
+  .issue-list {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .issue-list li {
+    background: #fef9e7;
+    border-left: 3px solid var(--color-warn);
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .issue-list li.ng {
+    background: #fef2f2;
+    border-color: var(--color-ng);
+  }
+  .issue-list li.haisen {
+    background: var(--color-haisen);
+    border-color: var(--color-haisen-border);
+    font-weight: 600;
+  }
+
+  /* アクション */
+  .action-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+  }
+  .btn {
+    padding: 10px 18px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+    transition: all 0.15s;
+  }
+  .btn:hover { background: var(--color-bg); }
+  .btn.primary { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+  .btn.primary:hover { background: var(--color-primary-dark); }
+  .btn.success { background: var(--color-ok); color: #fff; border-color: var(--color-ok); }
+  .btn.danger { background: var(--color-ng); color: #fff; border-color: var(--color-ng); }
+
+  /* メッセージ */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(31,41,51,0.95);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s, bottom 0.2s;
+  }
+  .toast.show { opacity: 1; bottom: 32px; }
+
+  /* 凡例 */
+  .legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: #f8f9fb;
+    border-radius: 6px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+  .legend-dot.ok { background: var(--color-ok); }
+  .legend-dot.warn { background: var(--color-warn); }
+  .legend-dot.ng { background: var(--color-ng); }
+  .legend-dot.na { background: var(--color-na); }
+
+  /* 印刷 */
+  @media print {
+    body { background: #fff; font-size: 11px; }
+    header.app-header { position: static; }
+    .tabs, .action-bar, .item-note:placeholder-shown, .add-row-btn, .judge-btn:not(.active), .del-btn { display: none !important; }
+    .panel { display: block !important; page-break-inside: avoid; }
+    .section-card { break-inside: avoid; box-shadow: none; }
+    .check-item { padding: 4px 0; }
+    .toast { display: none; }
+  }
+
+  /* レスポンシブ */
+  @media (max-width: 768px) {
+    main { padding: 12px; }
+    .check-item { grid-template-columns: 1fr; }
+    .check-item .actions { flex-wrap: wrap; }
+    .header-row { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-row">
+    <div>
+      <h1>ラフ図チェックツール</h1>
+      <div class="subtitle">EV充電設備 補助金申請用｜工事会社作成のラフ図・現調報告書 作図可否判定</div>
+    </div>
+    <div class="score-summary">
+      <div class="score-pill">総合 <span class="num" id="totalScore">0</span>%</div>
+      <div class="score-pill" style="background:rgba(245,158,11,0.25); border-color:rgba(245,158,11,0.5)">配線ルート図 <span class="num" id="haisenScore">0</span>%</div>
+      <div class="judgement-pill" id="judgementPill">未判定</div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 案件基本情報 -->
+<div class="project-info">
+  <h2>案件情報</h2>
+  <div class="field-grid">
+    <div class="field"><label>案件名</label><input type="text" id="proj_name" placeholder="例：平和堂知多店"></div>
+    <div class="field"><label>施設住所</label><input type="text" id="proj_address" placeholder="例：愛知県知多市八幡竹後20"></div>
+    <div class="field"><label>工事会社</label><input type="text" id="proj_contractor" placeholder="例：◯◯電気"></div>
+    <div class="field"><label>確認者</label><input type="text" id="proj_checker"></div>
+    <div class="field"><label>確認日</label><input type="date" id="proj_date"></div>
+    <div class="field">
+      <label>工事種別</label>
+      <select id="proj_type">
+        <option value="新設">新設（充電設備が無い場所へ新設）</option>
+        <option value="増設">増設（既設充電設備がある場所へ増設）</option>
+        <option value="撤去新設_同一箇所">撤去新設（同一設置箇所）</option>
+        <option value="撤去新設_同一敷地">撤去新設（同一敷地内・別箇所）</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>充電設備</label>
+      <select id="proj_charger">
+        <option value="3kW">普通3kW（コンセント）</option>
+        <option value="6kW" selected>普通6kW</option>
+        <option value="急速">急速</option>
+      </select>
+    </div>
+    <div class="field"><label>設置基数</label><input type="number" id="proj_count" value="1" min="1"></div>
+    <div class="field">
+      <label>引込種別</label>
+      <select id="proj_intake">
+        <option value="既設盤">既設キュービクル/分電盤から取得</option>
+        <option value="新規引込">新規引込（柱・電力量計新設）</option>
+        <option value="特例引込">特例引込</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- タブナビゲーション -->
+<div class="tabs">
+  <button class="tab-btn active" data-tab="materials">① 資料受領</button>
+  <button class="tab-btn" data-tab="mitori">② 設置場所見取図</button>
+  <button class="tab-btn" data-tab="heimen">③ 平面図</button>
+  <button class="tab-btn haisen" data-tab="haisen">★ ④ 配線ルート図</button>
+  <button class="tab-btn" data-tab="keitou">⑤ 電気系統図</button>
+  <button class="tab-btn" data-tab="cost">⑥ 配線長・料金</button>
+  <button class="tab-btn" data-tab="result">⑦ 判定結果</button>
+</div>
+
+<!-- ① 資料受領 -->
+<div class="panel active" id="panel-materials">
+  <div class="section-card">
+    <h3>受領資料の有無 <span class="badge">必須</span></h3>
+    <div class="desc">作図に必要な3点セット（ラフ図・現地調査報告書・要部写真）が揃っているか確認します。</div>
+    <div id="check-materials"></div>
+  </div>
+</div>
+
+<!-- ② 設置場所見取図 -->
+<div class="panel" id="panel-mitori">
+  <div class="section-card">
+    <h3>設置場所見取図 用情報</h3>
+    <div class="desc">敷地形状・公道との関係・案内板位置・充電スペース位置が読み取れるか確認します。</div>
+    <div id="check-mitori"></div>
+  </div>
+</div>
+
+<!-- ③ 平面図 -->
+<div class="panel" id="panel-heimen">
+  <div class="section-card">
+    <h3>平面図 用情報</h3>
+    <div class="desc">充電スペース寸法・充電設備の位置/正面/基礎・付帯設備の情報が確認できるか確認します。</div>
+    <div id="check-heimen"></div>
+  </div>
+</div>
+
+<!-- ④ 配線ルート図（最重要） -->
+<div class="panel" id="panel-haisen">
+  <div class="section-card haisen-emphasis">
+    <h3>配線ルート図 用情報 <span class="badge warn">最重要</span></h3>
+    <div class="desc">
+      <strong>本ツールで最も重視する項目です。</strong>
+      電源取得元 → プルボックス → 充電設備までの全ルートが追跡可能で、
+      各区間の配線長・線種・配管種別・配線方法（露出/埋設/架空）が明確であることが必須です。<br>
+      作図センターマニュアル準拠のため、以下を満たさない場合は差戻し対象となります。
+    </div>
+    <div id="check-haisen"></div>
+  </div>
+</div>
+
+<!-- ⑤ 電気系統図 -->
+<div class="panel" id="panel-keitou">
+  <div class="section-card">
+    <h3>電気系統図 用情報</h3>
+    <div class="desc">電源元から充電設備まで専用配線で結線されていることを審査するため、配電方式・盤名・ブレーカ仕様・電源線・接地が必要です。</div>
+    <div id="check-keitou"></div>
+  </div>
+</div>
+
+<!-- ⑥ 配線長・料金チェック -->
+<div class="panel" id="panel-cost">
+  <div class="section-card">
+    <h3>配線・配管長算定チェック <span class="badge info">補助金料金監視</span></h3>
+    <div class="desc">
+      工事会社申告の配線長を入力すると、作図センター標準値（NEV審査基準）と照合し、
+      <strong>過度な余長（補助金不正受給を疑われるレベル）</strong>を自動検出します。
+      また、案件ごとの補助金上限額に対する超過状況を表示します。
+    </div>
+
+    <h4 style="margin-top:14px">配線・配管長 区間入力</h4>
+    <table class="route-table">
+      <thead>
+        <tr>
+          <th style="width:18%">区間</th>
+          <th style="width:14%">線種</th>
+          <th style="width:14%">配管</th>
+          <th style="width:11%">配線方法</th>
+          <th style="width:10%; text-align:right">長さ(m)</th>
+          <th style="width:10%; text-align:right">標準値</th>
+          <th style="width:18%">判定/備考</th>
+          <th class="row-action"></th>
+        </tr>
+      </thead>
+      <tbody id="route-tbody"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" style="text-align:right">合計</td>
+          <td class="num-cell" id="route-total">0.0 m</td>
+          <td class="num-cell" id="route-std-total">0.0 m</td>
+          <td colspan="2" id="route-status">—</td>
+        </tr>
+      </tfoot>
+    </table>
+    <button class="add-row-btn" id="add-route-row">＋ 区間を追加</button>
+
+    <div class="cost-panel" id="cost-panel">
+      <h4>補助金料金監視</h4>
+      <div class="field-grid">
+        <div class="field">
+          <label>補助金上限金額（円/案件）</label>
+          <input type="number" id="cost_cap" value="3500000" step="100000">
+        </div>
+        <div class="field">
+          <label>想定工事費（円）</label>
+          <input type="number" id="cost_estimate" value="0" step="10000">
+        </div>
+        <div class="field">
+          <label>警告しきい値（%）</label>
+          <input type="number" id="cost_warn_pct" value="80" min="50" max="100">
+        </div>
+      </div>
+      <div class="cost-row">
+        <span>補助金上限：</span>
+        <span id="cap-display">¥3,500,000</span>
+      </div>
+      <div class="cost-row">
+        <span>想定工事費：</span>
+        <span id="estimate-display">¥0</span>
+      </div>
+      <div class="cost-row total">
+        <span>使用率：</span>
+        <span id="usage-pct">0%</span>
+      </div>
+      <div class="cost-bar"><div class="cost-bar-fill" id="cost-bar-fill" style="width:0%"></div></div>
+      <div id="cost-alert"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑦ 判定結果 -->
+<div class="panel" id="panel-result">
+  <div class="result-card" id="result-card">
+    <div class="result-header">
+      <div class="result-status" id="result-status">未判定</div>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-dot ok"></span>OK（必須情報あり）</div>
+        <div class="legend-item"><span class="legend-dot warn"></span>一部（要確認）</div>
+        <div class="legend-item"><span class="legend-dot ng"></span>不備（差戻し）</div>
+        <div class="legend-item"><span class="legend-dot na"></span>該当なし</div>
+      </div>
+    </div>
+    <div class="result-grid" id="result-grid"></div>
+    <h4 style="margin:12px 0 6px">指摘事項</h4>
+    <ul class="issue-list" id="issue-list"><li>チェックを実施すると指摘事項が表示されます。</li></ul>
+  </div>
+
+  <div class="section-card">
+    <h3>確認者総評・コメント</h3>
+    <textarea id="overall_comment" style="width:100%; min-height:100px; border:1px solid var(--color-border); border-radius:6px; padding:8px; font-family:inherit; font-size:13px;" placeholder="工事会社への申し送り事項、追加で必要な情報、その他のコメントを記載してください。"></textarea>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn primary" onclick="downloadReport()">📄 レポートをダウンロード（JSON）</button>
+    <button class="btn" onclick="window.print()">🖨️ 印刷 / PDF保存</button>
+    <button class="btn" onclick="exportText()">📋 テキストでコピー</button>
+    <button class="btn danger" onclick="resetAll()">🗑️ 入力をリセット</button>
+  </div>
+</div>
+
+<div class="action-bar" style="justify-content:flex-end">
+  <span style="font-size:11px; color:var(--color-muted); align-self:center; margin-right:auto;">入力内容は自動でブラウザに保存されます</span>
+  <button class="btn" onclick="loadJSON()">📂 JSON読込</button>
+  <input type="file" id="json-file" accept=".json" style="display:none" onchange="handleLoad(event)">
+</div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// =========================================================================
+// チェック項目定義
+// =========================================================================
+// 重要度: critical=必須/重大不備, high=高, medium=中, low=低
+// 配線ルート図セクションは特に細かく分割
+
+const CHECK_ITEMS = {
+  materials: [
+    { id: 'm01', text: 'ラフ図（手書き含む）が受領済み', hint: 'A3相当・手書き可。設置場所名が判別可能なこと。', importance: 'critical' },
+    { id: 'm02', text: '現地調査報告書が受領済み', hint: '電源取得元の外観/内観、配管ルート、車室周辺、案内板の写真があること。', importance: 'critical' },
+    { id: 'm03', text: '要部写真が揃っている', hint: '電源元(外観/内観)、主幹ブレーカ、空きブレーカ、ルート全景、設置位置、案内板、既設充電器（増設時）。', importance: 'critical' },
+    { id: 'm04', text: '案件ID・現調日・作成者が明記されている', hint: '作成者氏名、現地調査日、施設名、所在地。', importance: 'high' },
+    { id: 'm05', text: '工事種別が判別可能', hint: '新設 / 増設 / 撤去新設(同一箇所/同一敷地)のいずれに該当するか。', importance: 'high' },
+    { id: 'm06', text: '充電設備の機種・基数・kW数が指定されている', hint: '普通3kW / 6kW / 急速、台数、メーカー型式（既知の場合）。', importance: 'high' },
+  ],
+
+  mitori: [
+    { id: 'mt01', text: '施設全体の敷地形状が分かる', hint: 'Google Map等の流用可。市販の地図を活用してもよい。', importance: 'critical' },
+    { id: 'mt02', text: '敷地内における充電スペースの位置が示されている', hint: '駐車場のどの区画かが特定できること。', importance: 'critical' },
+    { id: 'mt03', text: '施設に接する公道名が記載されている', hint: '例）国道××号線、県道□□号線。公道に接していることが補助金の要件。', importance: 'critical' },
+    { id: 'mt04', text: '公道から充電設備設置場所への入口が全て図示されている', hint: '施設の出入口を全て表記する必要あり。', importance: 'high' },
+    { id: 'mt05', text: '案内板の設置位置が示されている', hint: '入口に設置すること。位置と向き(片面/両面)が分かること。', importance: 'critical' },
+    { id: 'mt06', text: '案内板の仕様（新設/既設・ポール/壁付・片面/両面・サイズ）が分かる', hint: '例）新設ポール 片面 500×500、既設ポール 両面 600×600 等。', importance: 'high' },
+    { id: 'mt07', text: '既設充電スペースの位置が記載されている（増設・撤去新設時）', hint: '増設・撤去新設の場合のみ必要。新設時は該当なし。', importance: 'high' },
+    { id: 'mt08', text: '隣接施設との位置関係が確認できる', hint: '施設に接する公道と他の施設との位置関係。', importance: 'medium' },
+  ],
+
+  heimen: [
+    { id: 'he01', text: '充電スペースの幅・奥行き寸法が記載されている', hint: '例）幅2,300mm × 奥行4,100mm 等。', importance: 'critical' },
+    { id: 'he02', text: '充電設備の正面方向が示されている', hint: '駐車車両に対しどちらを向くか。アイコン+方向の図示。', importance: 'critical' },
+    { id: 'he03', text: '充電スペースと充電設備の位置関係が寸法で読み取れる', hint: '車室の中央/端からの距離を寸法表記。', importance: 'critical' },
+    { id: 'he04', text: '充電設備の基礎寸法（たて・よこ・高さ）が記載されている', hint: '例）コンクリート 500×500×500。新設の場合必須。', importance: 'critical' },
+    { id: 'he05', text: '既存基礎の仕様（再利用/増し打ち/撤去/入替）が記載されている', hint: '撤去新設・増設で既存基礎がある場合のみ必要。', importance: 'high' },
+    { id: 'he06', text: '充電スペースのライン引き全長が記載されている（新設時）', hint: '路面表示の位置寸法も必要。', importance: 'high' },
+    { id: 'he07', text: '路面表示の位置がわかる寸法が記載されている', hint: 'EV充電マーク等の位置寸法。', importance: 'high' },
+    { id: 'he08', text: '車止めの位置と充電設備までの寸法が記載されている', hint: '既設車止めも図面に明記が必要。', importance: 'critical' },
+    { id: 'he09', text: '防護用部材の寸法（充電設備/充電スペースとの距離）が記載されている', hint: '車止め以外の防護柵・ポール等。', importance: 'high' },
+    { id: 'he10', text: '電灯位置が記載されている', hint: '充電設備・充電スペースを照らせる位置にあるか確認。', importance: 'medium' },
+    { id: 'he11', text: '屋根/小屋設置の有無が判別できる', hint: '屋根設置・小屋設置がある場合は仕様も。', importance: 'low' },
+    { id: 'he12', text: '既設充電設備の位置が記載されている（増設・撤去新設時）', hint: '増設・撤去新設の場合のみ。新設時は該当なし。', importance: 'high' },
+  ],
+
+  // ★最重要：配線ルート図 — 細かく分割
+  haisen: [
+    // === 電源取得元 ===
+    { id: 'ha01', text: '電源取得元（既設キュービクル/分電盤/手元開閉器/受変電設備）が特定できる', hint: '盤名（例：L-1、低圧電灯盤）、設置位置、写真でひも付け可能なこと。', importance: 'critical', haisen: true },
+    { id: 'ha02', text: '既設盤を使う場合、空きブレーカの位置・容量が判別できる', hint: '電源取得元(内観)写真で空きブレーカが赤丸等で指定されていること。', importance: 'critical', haisen: true },
+    { id: 'ha03', text: '主幹ブレーカ容量が判別できる', hint: '例）125A、225A 等。既設分電盤利用時は充電設備稼働の余剰確認に必須。', importance: 'critical', haisen: true },
+    { id: 'ha04', text: '受変電設備（高圧）の容量が記載されている', hint: '急速充電や特殊な引込時。例）3φ3W 100kVA 6.6kV/210V。', importance: 'high', haisen: true },
+    { id: 'ha05', text: '新規引込時、責任分界点・建柱・電力量計位置が記載されている', hint: '柱の高さ（6m/7m/8m/9m）と支線の有無。', importance: 'critical', haisen: true },
+
+    // === 充電設備位置 ===
+    { id: 'ha06', text: '充電設備の設置位置が配線ルート図上で特定できる', hint: '寸法入りで、平面図と整合していること。', importance: 'critical', haisen: true },
+    { id: 'ha07', text: '充電設備の基数・配置が分かる（共入れ/単独の別）', hint: '6kW二次側はCV8sq-3C×台数本。プルボックス通過時の共入れ可否。', importance: 'critical', haisen: true },
+
+    // === ルート全体 ===
+    { id: 'ha08', text: '電源元 → プルボックス → 充電設備までのルートが図面上で完全に追跡できる', hint: '途中でルートが切れていない、屈曲点・分岐点が明確。', importance: 'critical', haisen: true },
+    { id: 'ha09', text: 'ルートが地図的に妥当（最短経路で過度な遠回りがない）', hint: '余長過多はNEV審査で「補助金不正受給の疑い」と指摘される。', importance: 'critical', haisen: true },
+
+    // === 各区間の長さ ===
+    { id: 'ha10', text: '各区間の横引き距離が記載されている', hint: '区画ごと（直線ごと）に長さを記載。例）天井内配線 7.2m、外壁面 2.5m 等。', importance: 'critical', haisen: true },
+    { id: 'ha11', text: '立上げ・立下げの位置と長さが個別に記載されている', hint: '梁/スラブ/壁を避ける部分は立上げ/立下げで表記。例）外壁面立下げ 2.5m。', importance: 'critical', haisen: true },
+    { id: 'ha12', text: '盤内配線・盤上立上げ・盤内余長が記載されている', hint: '例）盤上立上げ 1m、盤内余長 1m、充電設備内部立上げ 2.5m。', importance: 'high', haisen: true },
+
+    // === 線種・配管 ===
+    { id: 'ha13', text: '全区間の線種が明記されている', hint: '例）CV5.5-3C、CV8sq-3C、CVT38sq-2C+IV8sq、CVT100sq、VVF2mm-3C 等。', importance: 'critical', haisen: true },
+    { id: 'ha14', text: '全区間の配管種別が明記されている', hint: '例）E25(金属薄鋼電線管)、G28(金属厚鋼)、PFD-28(可とう)、HIVE-42(硬質ビニル)、FEP30(波付硬質合成樹脂) 等。', importance: 'critical', haisen: true },
+    { id: 'ha15', text: '配管サイズが配線太さと整合している', hint: '6kW二次側CV8sq-3C(共入れ無し)はPFD-28、共入れ2本はPFD-36等の整合性。', importance: 'high', haisen: true },
+
+    // === 配線方法 ===
+    { id: 'ha16', text: '配線方法（露出/埋設/架空/天井内/壁内）が全区間で明記されている', hint: '色分け（露出=赤、埋設=青等）または注記で区別。', importance: 'critical', haisen: true },
+    { id: 'ha17', text: '埋設区間の路面状況が記載されている', hint: '例）アスファルト、コンクリート、土、砂利。掘削寸法（幅400mm、深さ300mm、長さ○m）も。', importance: 'critical', haisen: true },
+    { id: 'ha18', text: '架空配線がある場合、その区間と高さが記載されている', hint: '架空配線では支持物（電柱・支線）の情報も必要。', importance: 'high', haisen: true },
+
+    // === プルボックス ===
+    { id: 'ha19', text: 'プルボックス(PB)の設置位置と寸法が記載されている', hint: '例）新設プルボックス 250×250×100。中継数によりPB→PB→充電設備のルートを明示。', importance: 'critical', haisen: true },
+
+    // === 障害物・特殊条件 ===
+    { id: 'ha20', text: '避けるべき障害物（既設配管/柱/梁/樋/空調設備等）が記載されている', hint: '迂回経路は立上げ/立下げで表記。スロープなど高低差も同様。', importance: 'high', haisen: true },
+    { id: 'ha21', text: '高低差・斜面・スロープがある場合、立上げ/立下げ分が記載されている', hint: '水平投影距離と実配線長の差は高低差として表記。', importance: 'high', haisen: true },
+    { id: 'ha22', text: '盤・充電設備の設置高さが標準と異なる場合、寸法が記載されている', hint: '標準FL+1200mm（盤下端）、FL+1500mm（充電器下端）から外れる場合。', importance: 'medium', haisen: true },
+
+    // === 既設関連 ===
+    { id: 'ha23', text: '既設充電設備の位置と既設配線ルートが記載されている（増設・撤去新設時）', hint: '残置/撤去/流用の別を明記。新設時は該当なし。', importance: 'high', haisen: true },
+    { id: 'ha24', text: '既設EV分電盤を使う場合、内部配線・既設ブレーカが分かる', hint: '空きブレーカで分岐するか、新設盤を増設するか。', importance: 'high', haisen: true },
+
+    // === 付帯 ===
+    { id: 'ha25', text: 'ハンドホールの設置位置・仕様が記載されている（必要時）', hint: '材質・たて・よこ・高さ。埋設長距離時に必要。', importance: 'medium', haisen: true },
+    { id: 'ha26', text: '案内板への電灯配線がある場合、ルートが記載されている', hint: '自照式案内板のとき必要。電気系統図にも反映。', importance: 'medium', haisen: true },
+
+    // === 数量・余長妥当性 ===
+    { id: 'ha27', text: '配線長合計（全長と内訳）が記載または計算可能', hint: '全長 = 露出 + 管内（金属/合成樹脂、露出/埋設）の内訳。', importance: 'critical', haisen: true },
+    { id: 'ha28', text: '余長が妥当な範囲（一律1.25倍・一律+5m等の根拠なき加算がない）', hint: '作図センターマニュアル準拠。NEVが「過度な余長」として差戻す典型パターン。', importance: 'critical', haisen: true },
+    { id: 'ha29', text: '立上げ・立下げ数量が標準仕様と整合（柱高さ補正含む）', hint: '7m柱：立下げ5m、6m柱：4m、8m柱：6m、9m柱：7m。新規/特例引込時。', importance: 'high', haisen: true },
+  ],
+
+  keitou: [
+    { id: 'ke01', text: '配電方式が記載されている', hint: '例）1φ3W 100/200V（普通）、3φ3W 6.6kV/210V（高圧）。', importance: 'critical' },
+    { id: 'ke02', text: '電源元の盤名（既設）またはメーカー名・型式（新設）が記載されている', hint: '既設利用：盤名（L-1等）。新規引込：メーカー名・型式。', importance: 'critical' },
+    { id: 'ke03', text: 'ブレーカ仕様（種類・容量）が全て記載されている', hint: '例）ELB2P2E 20AF/20AT。充電設備設置工事に伴うブレーカは全て。', importance: 'critical' },
+    { id: 'ke04', text: '主幹・上流ブレーカの容量が記載されている', hint: '既設分電盤利用時は余剰確認のため必須。例：「主幹ブレーカの容量に不足はありません」。', importance: 'critical' },
+    { id: 'ke05', text: 'ブレーカ交換がある場合、交換前/交換後が判別できる', hint: '例）交換前 ELB2P2E 20AF/20AT → 交換後 ELB2P2E 50AF/30AT。', importance: 'high' },
+    { id: 'ke06', text: '電源線の線種が記載されている', hint: '例）CV5.5-3C(1Cはアースに使用)、CVT100sq・IV14sq。', importance: 'critical' },
+    { id: 'ke07', text: '接地（種別・アース線・接地箇所）が記載されている', hint: '例）Ec/Ed、IV5.5sq/IV14sq。どこから接地極へ配線するか。', importance: 'critical' },
+    { id: 'ke08', text: '充電設備の種類・メーカー名・型式が記載されている', hint: '例）普通充電設備 次世代電機㈱ ABC-R03-000。', importance: 'critical' },
+    { id: 'ke09', text: '通信線（課金機等の別体装置）が記載されている', hint: '課金機を使う場合のみ必要。', importance: 'medium' },
+    { id: 'ke10', text: '電灯配線（充電設備周辺電灯・案内板照明）が記載されている', hint: 'タイマースイッチがある場合も含めて記載。', importance: 'medium' },
+    { id: 'ke11', text: 'デマンド制御がある場合、同時稼働台数が記載されている', hint: '充電設備複数基＋デマンドコントローラ＋課金デバイス使用時のみ。', importance: 'medium' },
+    { id: 'ke12', text: '既設充電設備の電気系統図が記載されている（増設・撤去新設時）', hint: '増設/撤去新設(同一箇所/同一敷地)のとき必要。', importance: 'high' },
+  ]
+};
+
+// =========================================================================
+// 配線長標準値（作図センターマニュアル R8-1 基準）
+// =========================================================================
+const ROUTE_PRESETS = [
+  // 新規・特例引込 (一次側)
+  { label: '責任分界点余長',           cable: 'CVT', conduit: '露出',     method: '露出', std: 1, group: '新規引込' },
+  { label: '責任分界点～電力量計(立下げ)', cable: 'CVT', conduit: 'HIVE',     method: '露出', std: 4, group: '新規引込', note: '7m柱基準。6m=3,8m=5,9m=6' },
+  { label: '電力量計内配線',           cable: 'CVT', conduit: '露出',     method: '露出', std: 1, group: '新規引込' },
+  { label: '電力量計～分電盤(横引き/立下げ)', cable: 'CVT', conduit: 'PFD',  method: '露出', std: 2, group: '新規引込', note: '現地寸法+標準余長2m' },
+  { label: '分電盤内配線・余長(CVT)',  cable: 'CVT', conduit: '露出',     method: '露出', std: 2, group: '新規引込' },
+  { label: '分電盤内配線・余長(IV)',   cable: 'IV',  conduit: 'PFD16',    method: '露出', std: 1, group: '新規引込' },
+  { label: '立下げ(IV)',              cable: 'IV',  conduit: '露出',     method: '露出', std: 2, group: '新規引込' },
+
+  // 既設盤（一次側）
+  { label: 'ブレーカ余長(既設盤)',     cable: 'CV+IV', conduit: '露出',   method: '露出', std: 2, group: '既設盤' },
+  { label: '立下げ(既設盤側)',         cable: 'CV+IV', conduit: 'PFD',   method: '露出', std: 2, group: '既設盤' },
+  { label: '横引き(既設盤→新設盤)',    cable: 'CV+IV', conduit: 'PFD/HIVE', method: '露出', std: 0, group: '既設盤', note: '現調実測。過度な余長NG' },
+  { label: '立上げ(新設盤側)',         cable: 'CV+IV', conduit: 'PFD',   method: '露出', std: 2, group: '既設盤' },
+  { label: '分電盤内配線・余長',       cable: 'CV+IV', conduit: '露出',   method: '露出', std: 2, group: '既設盤' },
+
+  // 6kW 二次側
+  { label: '分電盤内余長(CV8sq-3C)',   cable: 'CV8sq-3C', conduit: '露出', method: '露出', std: 2, group: '6kW二次側' },
+  { label: '立下げ(分電盤→PB)',        cable: 'CV8sq-3C', conduit: 'PFD-28', method: '露出', std: 2, group: '6kW二次側' },
+  { label: '横引き(分電盤→PB)',        cable: 'CV8sq-3C', conduit: 'PFD/HIVE', method: '露出/埋設', std: 0, group: '6kW二次側', note: '現調実測' },
+  { label: '横引き(PB→PB)',            cable: 'CV8sq-3C', conduit: 'PFD/HIVE', method: '露出/埋設', std: 0, group: '6kW二次側', note: '現調実測' },
+  { label: '横引き(PB→充電器)',        cable: 'CV8sq-3C', conduit: 'PFD-28', method: '露出/埋設', std: 0, group: '6kW二次側', note: '現調実測' },
+  { label: '立上げ(PB→充電器単独)',    cable: 'CV8sq-3C', conduit: 'PFD-28', method: '露出', std: 2, group: '6kW二次側' },
+  { label: '立上げ(PB→充電器共入れ)',  cable: 'CV8sq-3C×2', conduit: 'PFD-36', method: '露出', std: 2, group: '6kW二次側' },
+  { label: '充電器内配線余長',         cable: 'CV8sq-3C', conduit: '露出',  method: '露出', std: 1, group: '6kW二次側' },
+
+  // 3kW 二次側
+  { label: '分電盤内余長(VVF2+IV5.5)', cable: 'VVF2mm-2C+IV5.5sq', conduit: '露出', method: '露出', std: 2, group: '3kW二次側' },
+  { label: '横引き(盤間接続)',         cable: 'VVF2mm-2C+IV5.5sq', conduit: 'PFD', method: '露出', std: 2, group: '3kW二次側' },
+  { label: '制御盤内余長',             cable: 'VVF2mm-2C+IV5.5sq', conduit: '露出', method: '露出', std: 2, group: '3kW二次側' },
+  { label: '立下げ(制御盤→PB)',        cable: 'VVF2mm-3C', conduit: 'PFD',  method: '露出', std: 2, group: '3kW二次側' },
+  { label: '立上げ(PB→コンセント)',    cable: 'VVF2mm-3C', conduit: 'PFD-16', method: '露出', std: 2, group: '3kW二次側' },
+  { label: 'コンセント内配線余長',     cable: 'VVF2mm-3C', conduit: '露出',  method: '露出', std: 1, group: '3kW二次側' },
+
+  // 自由入力
+  { label: '（自由入力）',             cable: '', conduit: '', method: '', std: 0, group: 'カスタム' },
+];
+
+// =========================================================================
+// 状態
+// =========================================================================
+const STORAGE_KEY = 'rough_drawing_check_v1';
+let state = loadState() || {
+  project: {},
+  judgements: {},  // { itemId: 'ok'|'warn'|'ng'|'na' }
+  notes: {},       // { itemId: 'note text' }
+  routes: [],
+  cost: { cap: 3500000, estimate: 0, warnPct: 80 },
+  comment: ''
+};
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch(e) {}
+}
+
+// =========================================================================
+// 描画
+// =========================================================================
+function renderCheckList(containerId, items) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  items.forEach(item => {
+    const wrap = document.createElement('div');
+    wrap.className = 'check-item';
+    wrap.dataset.id = item.id;
+
+    const importanceLabel = item.importance === 'critical' ? '必須' :
+                            item.importance === 'high' ? '重要' :
+                            item.importance === 'medium' ? '通常' : '付加';
+    const importanceClass = item.haisen ? 'haisen' : '';
+    const judgement = state.judgements[item.id] || '';
+    const note = state.notes[item.id] || '';
+
+    wrap.innerHTML = `
+      <div class="item-text">
+        <span class="important ${importanceClass}">${importanceLabel}</span>
+        ${item.text}
+        ${item.hint ? `<span class="hint">💡 ${item.hint}</span>` : ''}
+      </div>
+      <div class="actions">
+        <button class="judge-btn ${judgement==='ok'?'active ok':''}"   data-judge="ok"   title="OK・必要情報あり">✅</button>
+        <button class="judge-btn ${judgement==='warn'?'active warn':''}" data-judge="warn" title="一部不足・要確認">⚠️</button>
+        <button class="judge-btn ${judgement==='ng'?'active ng':''}"   data-judge="ng"   title="不備・差戻し">❌</button>
+        <button class="judge-btn ${judgement==='na'?'active na':''}"   data-judge="na"   title="該当なし">－</button>
+      </div>
+      <textarea class="item-note" placeholder="備考・申し送り（任意）">${escape(note)}</textarea>
+    `;
+
+    wrap.querySelectorAll('.judge-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        const v = b.dataset.judge;
+        // 同じボタン押下で解除
+        if (state.judgements[item.id] === v) {
+          delete state.judgements[item.id];
+        } else {
+          state.judgements[item.id] = v;
+        }
+        renderCheckList(containerId, items);
+        updateScores();
+        saveState();
+      });
+    });
+
+    wrap.querySelector('.item-note').addEventListener('input', e => {
+      state.notes[item.id] = e.target.value;
+      saveState();
+    });
+
+    c.appendChild(wrap);
+  });
+}
+
+function escape(s) {
+  if (!s) return '';
+  return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// =========================================================================
+// スコア計算
+// =========================================================================
+const WEIGHTS = { critical: 5, high: 3, medium: 2, low: 1 };
+
+function calcSectionScore(items) {
+  let earned = 0, possible = 0;
+  let critFail = 0;
+  items.forEach(item => {
+    const j = state.judgements[item.id];
+    if (j === 'na') return; // 該当なしは除外
+    const w = WEIGHTS[item.importance] || 1;
+    possible += w;
+    if (j === 'ok') earned += w;
+    else if (j === 'warn') earned += w * 0.5;
+    else if (j === 'ng') {
+      if (item.importance === 'critical') critFail++;
+    }
+    // 未判定は0
+  });
+  return {
+    pct: possible > 0 ? Math.round(earned / possible * 100) : 0,
+    earned, possible, critFail
+  };
+}
+
+function updateScores() {
+  const sections = ['materials', 'mitori', 'heimen', 'haisen', 'keitou'];
+  const totals = { earned: 0, possible: 0, critFail: 0 };
+  const sectionScores = {};
+  sections.forEach(s => {
+    const r = calcSectionScore(CHECK_ITEMS[s]);
+    sectionScores[s] = r;
+    totals.earned += r.earned;
+    totals.possible += r.possible;
+    totals.critFail += r.critFail;
+  });
+  const totalPct = totals.possible > 0 ? Math.round(totals.earned / totals.possible * 100) : 0;
+  const haisenPct = sectionScores.haisen.pct;
+
+  document.getElementById('totalScore').textContent = totalPct;
+  document.getElementById('haisenScore').textContent = haisenPct;
+
+  // タブにスコア表示
+  sections.forEach(s => {
+    const tab = document.querySelector(`.tab-btn[data-tab="${s}"]`);
+    if (tab) {
+      let badge = tab.querySelector('.tab-score');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'tab-score';
+        tab.appendChild(badge);
+      }
+      badge.textContent = sectionScores[s].pct + '%';
+    }
+  });
+
+  // 総合判定
+  const judgementPill = document.getElementById('judgementPill');
+  let judgement, jclass;
+  if (totals.critFail > 0 || sectionScores.haisen.critFail > 0) {
+    judgement = '差戻し'; jclass = 'ng';
+  } else if (totalPct >= 90 && haisenPct >= 90) {
+    judgement = '作図可'; jclass = 'ok';
+  } else if (totalPct >= 70 && haisenPct >= 70) {
+    judgement = '一部要追加'; jclass = 'warn';
+  } else {
+    judgement = '差戻し'; jclass = 'ng';
+  }
+  judgementPill.textContent = judgement;
+  judgementPill.className = 'judgement-pill ' + jclass;
+
+  renderResult(totalPct, haisenPct, sectionScores, judgement, jclass);
+}
+
+function renderResult(totalPct, haisenPct, sectionScores, judgement, jclass) {
+  const card = document.getElementById('result-card');
+  card.className = 'result-card ' + jclass;
+  document.getElementById('result-status').textContent = '【総合判定】' + judgement;
+  document.getElementById('result-status').className = 'result-status ' + jclass;
+
+  // タイル
+  const grid = document.getElementById('result-grid');
+  grid.innerHTML = '';
+  const tiles = [
+    { label: '総合スコア',         val: totalPct + '%' },
+    { label: '配線ルート図 ★',     val: haisenPct + '%', haisen: true },
+    { label: '資料受領',          val: sectionScores.materials.pct + '%' },
+    { label: '設置場所見取図',     val: sectionScores.mitori.pct + '%' },
+    { label: '平面図',            val: sectionScores.heimen.pct + '%' },
+    { label: '電気系統図',        val: sectionScores.keitou.pct + '%' },
+  ];
+  tiles.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'result-tile' + (t.haisen ? ' haisen' : '');
+    div.innerHTML = `<div class="label">${t.label}</div><div class="value">${t.val}</div>`;
+    grid.appendChild(div);
+  });
+
+  // 指摘事項
+  const issueList = document.getElementById('issue-list');
+  issueList.innerHTML = '';
+  const issues = [];
+  Object.keys(CHECK_ITEMS).forEach(sec => {
+    CHECK_ITEMS[sec].forEach(item => {
+      const j = state.judgements[item.id];
+      if (j === 'ng' || j === 'warn') {
+        issues.push({
+          severity: j,
+          haisen: item.haisen,
+          text: item.text,
+          section: sectionLabel(sec),
+          importance: item.importance,
+          note: state.notes[item.id] || ''
+        });
+      }
+    });
+  });
+  if (issues.length === 0) {
+    issueList.innerHTML = '<li style="background:#ecfdf5; border-color:var(--color-ok);">✅ 指摘事項はありません。</li>';
+  } else {
+    // 重要度・配線ルート優先でソート
+    issues.sort((a, b) => {
+      if (a.haisen !== b.haisen) return a.haisen ? -1 : 1;
+      const sevOrder = { ng: 0, warn: 1 };
+      if (a.severity !== b.severity) return sevOrder[a.severity] - sevOrder[b.severity];
+      const impOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+      return impOrder[a.importance] - impOrder[b.importance];
+    });
+    issues.forEach(i => {
+      const li = document.createElement('li');
+      li.className = (i.severity === 'ng' ? 'ng' : '') + (i.haisen ? ' haisen' : '');
+      li.innerHTML = `
+        <strong>[${i.section}] ${i.severity === 'ng' ? '❌ 差戻し' : '⚠️ 要確認'}</strong>
+        ${i.haisen ? '<span style="color:#f59e0b">★配線ルート図</span> ' : ''}
+        ${escape(i.text)}
+        ${i.note ? `<br><span style="color:var(--color-muted); font-size:11px">備考: ${escape(i.note)}</span>` : ''}
+      `;
+      issueList.appendChild(li);
+    });
+  }
+}
+
+function sectionLabel(s) {
+  return ({ materials:'資料', mitori:'見取図', heimen:'平面図', haisen:'配線ルート★', keitou:'電気系統図' })[s] || s;
+}
+
+// =========================================================================
+// 配線長表
+// =========================================================================
+function renderRoutes() {
+  const tbody = document.getElementById('route-tbody');
+  tbody.innerHTML = '';
+  let total = 0, stdTotal = 0, exceeded = 0;
+
+  state.routes.forEach((r, idx) => {
+    const tr = document.createElement('tr');
+    const labelOptions = ROUTE_PRESETS.map(p => `<option value="${escape(p.label)}" ${p.label===r.label?'selected':''}>${escape(p.label)}（${p.group}）</option>`).join('');
+    const len = parseFloat(r.length) || 0;
+    const std = parseFloat(r.std) || 0;
+    total += len;
+    stdTotal += std;
+    let status = '—';
+    let statusClass = '';
+    if (std > 0 && len > 0) {
+      const ratio = len / std;
+      if (ratio > 1.5) {
+        status = `⚠️ 標準値の${(ratio*100).toFixed(0)}%（過度な余長の疑い）`;
+        statusClass = 'color:var(--color-ng); font-weight:600';
+        exceeded++;
+      } else if (ratio > 1.2) {
+        status = `△ 標準値の${(ratio*100).toFixed(0)}%（要確認）`;
+        statusClass = 'color:var(--color-warn)';
+      } else {
+        status = `✅ 標準値内`;
+        statusClass = 'color:var(--color-ok)';
+      }
+    } else if (std === 0 && len > 0) {
+      status = `現調実測（数量上限なし）`;
+      statusClass = 'color:var(--color-muted)';
+    }
+
+    tr.innerHTML = `
+      <td><select onchange="updateRoute(${idx}, 'label', this.value)">${labelOptions}</select></td>
+      <td><input type="text" value="${escape(r.cable||'')}" oninput="updateRoute(${idx}, 'cable', this.value)" placeholder="例 CV8sq-3C"></td>
+      <td><input type="text" value="${escape(r.conduit||'')}" oninput="updateRoute(${idx}, 'conduit', this.value)" placeholder="例 PFD-28"></td>
+      <td><input type="text" value="${escape(r.method||'')}" oninput="updateRoute(${idx}, 'method', this.value)" placeholder="露出/埋設"></td>
+      <td class="num-cell"><input type="number" step="0.1" value="${r.length||''}" class="num-cell" oninput="updateRoute(${idx}, 'length', this.value)" placeholder="0.0"></td>
+      <td class="num-cell"><input type="number" step="0.1" value="${r.std||''}" class="num-cell" oninput="updateRoute(${idx}, 'std', this.value)" placeholder="0.0"></td>
+      <td style="${statusClass}; font-size:11px">${status}</td>
+      <td class="row-action"><button class="del-btn" onclick="removeRoute(${idx})">×</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('route-total').textContent = total.toFixed(1) + ' m';
+  document.getElementById('route-std-total').textContent = stdTotal.toFixed(1) + ' m';
+  const statusEl = document.getElementById('route-status');
+  if (exceeded > 0) {
+    statusEl.innerHTML = `<span style="color:var(--color-ng); font-weight:600">⚠️ ${exceeded}区間で過度な余長の疑いあり（NEV審査リスク）</span>`;
+  } else if (state.routes.length > 0) {
+    statusEl.innerHTML = `<span style="color:var(--color-ok)">配線長は妥当な範囲</span>`;
+  } else {
+    statusEl.textContent = '—';
+  }
+}
+
+window.updateRoute = function(idx, key, value) {
+  if (!state.routes[idx]) return;
+  state.routes[idx][key] = value;
+  // ラベル変更時、プリセット値を反映
+  if (key === 'label') {
+    const preset = ROUTE_PRESETS.find(p => p.label === value);
+    if (preset && preset.label !== '（自由入力）') {
+      state.routes[idx].cable = preset.cable;
+      state.routes[idx].conduit = preset.conduit;
+      state.routes[idx].method = preset.method;
+      state.routes[idx].std = preset.std;
+    }
+  }
+  saveState();
+  renderRoutes();
+  updateCost();
+};
+
+window.removeRoute = function(idx) {
+  state.routes.splice(idx, 1);
+  saveState();
+  renderRoutes();
+  updateCost();
+};
+
+document.getElementById('add-route-row').addEventListener('click', () => {
+  state.routes.push({ label: '（自由入力）', cable: '', conduit: '', method: '', length: '', std: 0 });
+  saveState();
+  renderRoutes();
+});
+
+// =========================================================================
+// 料金監視
+// =========================================================================
+function updateCost() {
+  const cap = parseFloat(document.getElementById('cost_cap').value) || 0;
+  const estimate = parseFloat(document.getElementById('cost_estimate').value) || 0;
+  const warnPct = parseFloat(document.getElementById('cost_warn_pct').value) || 80;
+
+  state.cost = { cap, estimate, warnPct };
+  saveState();
+
+  document.getElementById('cap-display').textContent = '¥' + cap.toLocaleString();
+  document.getElementById('estimate-display').textContent = '¥' + estimate.toLocaleString();
+
+  const pct = cap > 0 ? estimate / cap * 100 : 0;
+  document.getElementById('usage-pct').textContent = pct.toFixed(1) + '%';
+  document.getElementById('cost-bar-fill').style.width = Math.min(pct, 100) + '%';
+
+  const panel = document.getElementById('cost-panel');
+  const alertBox = document.getElementById('cost-alert');
+  alertBox.innerHTML = '';
+  panel.classList.remove('warning', 'danger');
+
+  if (cap > 0 && estimate > 0) {
+    if (estimate > cap) {
+      // 超過
+      const over = estimate - cap;
+      panel.classList.add('danger');
+      alertBox.className = 'cost-alert danger';
+      alertBox.innerHTML = `
+        🚨 <strong>補助金上限を超過しています</strong><br>
+        あなたは <span class="yen-over">¥${over.toLocaleString()}</span> 分オーバーしています。<br>
+        <span style="font-size:12px">→ 工事内容の見直し、配線ルート最適化、付帯工事の精査が必要です。NEV審査では「過度な申請」として差戻し・申請受付不可のリスクがあります。</span>
+      `;
+    } else if (pct >= warnPct) {
+      // 警告
+      panel.classList.add('warning');
+      alertBox.className = 'cost-alert warn';
+      const remaining = cap - estimate;
+      alertBox.innerHTML = `
+        ⚠️ <strong>補助金上限に近づいています（${pct.toFixed(1)}%）</strong><br>
+        残り余裕：¥${remaining.toLocaleString()}<br>
+        <span style="font-size:12px">→ 配線・配管長の余長過多が無いか、再度ご確認ください。</span>
+      `;
+    } else {
+      alertBox.className = 'cost-alert';
+      alertBox.style.background = '#ecfdf5';
+      alertBox.style.borderColor = '#16a34a';
+      alertBox.style.color = '#065f46';
+      alertBox.innerHTML = `✅ 補助金上限内です（残り余裕：¥${(cap-estimate).toLocaleString()}）`;
+    }
+  }
+}
+
+['cost_cap','cost_estimate','cost_warn_pct'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateCost);
+});
+
+// =========================================================================
+// プロジェクト情報
+// =========================================================================
+const PROJ_FIELDS = ['proj_name','proj_address','proj_contractor','proj_checker','proj_date','proj_type','proj_charger','proj_count','proj_intake'];
+PROJ_FIELDS.forEach(id => {
+  const el = document.getElementById(id);
+  if (state.project[id]) el.value = state.project[id];
+  el.addEventListener('input', () => {
+    state.project[id] = el.value;
+    saveState();
+  });
+});
+
+document.getElementById('overall_comment').value = state.comment || '';
+document.getElementById('overall_comment').addEventListener('input', e => {
+  state.comment = e.target.value;
+  saveState();
+});
+
+// =========================================================================
+// タブ切替
+// =========================================================================
+document.querySelectorAll('.tab-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('panel-' + b.dataset.tab).classList.add('active');
+  });
+});
+
+// =========================================================================
+// レポート出力
+// =========================================================================
+function downloadReport() {
+  const data = {
+    tool: 'ラフ図チェックツール',
+    version: '1.0',
+    exportedAt: new Date().toISOString(),
+    project: state.project,
+    judgements: state.judgements,
+    notes: state.notes,
+    routes: state.routes,
+    cost: state.cost,
+    comment: state.comment,
+    summary: getSummary()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  const fname = (state.project.proj_name || 'ラフ図チェック') + '_' + new Date().toISOString().slice(0,10) + '.json';
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  a.click();
+  toast('JSONをダウンロードしました');
+}
+
+function getSummary() {
+  const sections = ['materials', 'mitori', 'heimen', 'haisen', 'keitou'];
+  const sectionScores = {};
+  sections.forEach(s => {
+    sectionScores[s] = calcSectionScore(CHECK_ITEMS[s]);
+  });
+  return sectionScores;
+}
+
+function exportText() {
+  const lines = [];
+  lines.push('=== ラフ図チェックツール 結果 ===');
+  lines.push('案件名: ' + (state.project.proj_name || '-'));
+  lines.push('施設住所: ' + (state.project.proj_address || '-'));
+  lines.push('工事会社: ' + (state.project.proj_contractor || '-'));
+  lines.push('確認者: ' + (state.project.proj_checker || '-'));
+  lines.push('確認日: ' + (state.project.proj_date || '-'));
+  lines.push('工事種別: ' + (state.project.proj_type || '-'));
+  lines.push('充電設備: ' + (state.project.proj_charger || '-') + ' × ' + (state.project.proj_count || '-') + '基');
+  lines.push('引込種別: ' + (state.project.proj_intake || '-'));
+  lines.push('総合判定: ' + document.getElementById('judgementPill').textContent);
+  lines.push('総合スコア: ' + document.getElementById('totalScore').textContent + '%');
+  lines.push('配線ルート図スコア: ' + document.getElementById('haisenScore').textContent + '%');
+  lines.push('');
+  lines.push('--- 指摘事項 ---');
+  document.querySelectorAll('#issue-list li').forEach(li => {
+    lines.push('・' + li.innerText.replace(/\n/g, ' / '));
+  });
+  lines.push('');
+  lines.push('--- 確認者総評 ---');
+  lines.push(state.comment || '(なし)');
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    toast('テキストをクリップボードにコピーしました');
+  }).catch(() => {
+    // フォールバック
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('テキストをコピーしました');
+  });
+}
+
+function loadJSON() {
+  document.getElementById('json-file').click();
+}
+
+window.handleLoad = function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      const data = JSON.parse(evt.target.result);
+      if (data.project) state.project = data.project;
+      if (data.judgements) state.judgements = data.judgements;
+      if (data.notes) state.notes = data.notes;
+      if (data.routes) state.routes = data.routes;
+      if (data.cost) state.cost = data.cost;
+      if (data.comment !== undefined) state.comment = data.comment;
+      saveState();
+      restoreUI();
+      toast('JSONを読み込みました');
+    } catch(err) {
+      toast('JSON読込に失敗しました: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+};
+
+function resetAll() {
+  if (!confirm('全ての入力をリセットします。よろしいですか？')) return;
+  state = { project: {}, judgements: {}, notes: {}, routes: [], cost: { cap: 3500000, estimate: 0, warnPct: 80 }, comment: '' };
+  saveState();
+  restoreUI();
+  toast('リセットしました');
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function restoreUI() {
+  PROJ_FIELDS.forEach(id => {
+    document.getElementById(id).value = state.project[id] || '';
+  });
+  document.getElementById('cost_cap').value = state.cost.cap || 3500000;
+  document.getElementById('cost_estimate').value = state.cost.estimate || 0;
+  document.getElementById('cost_warn_pct').value = state.cost.warnPct || 80;
+  document.getElementById('overall_comment').value = state.comment || '';
+  Object.keys(CHECK_ITEMS).forEach(s => {
+    renderCheckList('check-' + s, CHECK_ITEMS[s]);
+  });
+  renderRoutes();
+  updateCost();
+  updateScores();
+}
+
+// =========================================================================
+// 初期化
+// =========================================================================
+restoreUI();
+</script>
+
+</body>
+</html>
