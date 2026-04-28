@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ラフ図チェックツール｜EV充電設備 補助金申請</title>
+<title>ラフ図チェックツール｜EV充電設備 補助金申請（AI解析対応）</title>
 <style>
   :root {
     --color-primary: #c8102e;
@@ -594,6 +594,255 @@
   .legend-dot.ng { background: var(--color-ng); }
   .legend-dot.na { background: var(--color-na); }
 
+  /* AI解析セクション */
+  .tab-btn.ai-tab {
+    background: linear-gradient(135deg, #4285f4 0%, #34a853 50%, #fbbc05 100%);
+    color: #fff;
+    font-weight: 700;
+  }
+  .tab-btn.ai-tab.active {
+    background: linear-gradient(135deg, #1a73e8 0%, #137333 50%, #f9ab00 100%);
+    box-shadow: 0 0 0 2px #fff inset;
+  }
+  .tab-btn.ai-tab:not(.active):hover {
+    opacity: 0.85;
+    color: #fff;
+  }
+  .tab-btn.ai-tab .tab-score {
+    background: rgba(255,255,255,0.3);
+    color: #fff;
+  }
+
+  .ai-section {
+    background: linear-gradient(135deg, #f0f7ff 0%, #f0fff4 100%);
+    border: 1px solid #c7e0ff;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .ai-section h3 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a73e8;
+  }
+  .ai-section .step-num {
+    display: inline-block;
+    width: 22px; height: 22px;
+    background: #1a73e8; color: #fff;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 22px;
+    font-size: 12px;
+    margin-right: 6px;
+    font-weight: 700;
+  }
+
+  .api-key-input {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .api-key-input input {
+    flex: 1;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: monospace;
+    font-size: 13px;
+  }
+  .link-btn {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--color-info);
+  }
+  .link-btn:hover { background: #fff; }
+  .privacy-notice {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #fffbeb;
+    border-left: 3px solid var(--color-warn);
+    border-radius: 4px;
+    font-size: 12px;
+    color: #92400e;
+  }
+  .muted-small { font-size: 11px; color: var(--color-muted); }
+
+  .upload-zone {
+    border: 2px dashed #93c5fd;
+    border-radius: 10px;
+    padding: 28px 16px;
+    text-align: center;
+    background: #fff;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: #1a73e8;
+    background: #eff6ff;
+  }
+  .upload-zone .upload-icon { font-size: 36px; margin-bottom: 8px; }
+  .upload-zone .upload-main { font-size: 14px; font-weight: 600; }
+  .upload-zone .upload-sub { font-size: 12px; color: var(--color-muted); margin-top: 4px; }
+
+  .file-list { margin-top: 12px; }
+  .file-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    margin-bottom: 6px;
+  }
+  .file-card .thumb {
+    width: 36px; height: 36px;
+    object-fit: cover;
+    border-radius: 4px;
+    background: #f3f4f6;
+  }
+  .file-card .thumb-icon {
+    width: 36px; height: 36px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .file-card .file-info { flex: 1; min-width: 0; }
+  .file-card .file-name {
+    font-size: 13px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file-card .file-meta { font-size: 11px; color: var(--color-muted); }
+  .file-summary {
+    text-align: right;
+    font-size: 12px;
+    color: var(--color-muted);
+    padding: 6px 4px;
+  }
+
+  .analyze-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #1a73e8, #137333);
+    color: #fff;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 12px;
+    box-shadow: 0 4px 14px rgba(26,115,232,0.25);
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .analyze-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(26,115,232,0.35); }
+  .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .progress {
+    display: flex; align-items: center; gap: 12px;
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-top: 10px;
+  }
+  .spinner {
+    width: 24px; height: 24px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #1a73e8;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .ai-result-summary {
+    background: #fff;
+    border: 1px solid #c7e0ff;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-top: 12px;
+  }
+  .ai-result-summary h4 { margin: 0 0 10px; font-size: 14px; color: #1a73e8; }
+  .result-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+    padding: 10px 0;
+  }
+  .result-summary-grid > div {
+    background: #f8f9fb;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .result-summary-grid strong { font-size: 16px; margin-left: 4px; }
+
+  .dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .dot.ok { background: var(--color-ok); }
+  .dot.warn { background: var(--color-warn); }
+  .dot.ng { background: var(--color-ng); }
+  .dot.na { background: var(--color-na); }
+
+  .cost-block {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 10px 0;
+    font-size: 12px;
+  }
+  .cost-block strong { font-size: 14px; color: var(--color-primary); }
+
+  .ai-detail-item {
+    background: #f8f9fb;
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    border-left: 3px solid var(--color-border);
+    font-size: 12px;
+  }
+
+  .ai-source-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #4285f4, #34a853);
+    color: #fff;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 700;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+
+  details > summary {
+    cursor: pointer;
+    padding: 8px 12px;
+    background: #f8f9fb;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  details[open] > summary { background: #eff6ff; }
+
   /* 印刷 */
   @media print {
     body { background: #fff; font-size: 11px; }
@@ -672,7 +921,8 @@
 
 <!-- タブナビゲーション -->
 <div class="tabs">
-  <button class="tab-btn active" data-tab="materials">① 資料受領</button>
+  <button class="tab-btn ai-tab active" data-tab="ai">🤖 AI解析</button>
+  <button class="tab-btn" data-tab="materials">① 資料受領</button>
   <button class="tab-btn" data-tab="mitori">② 設置場所見取図</button>
   <button class="tab-btn" data-tab="heimen">③ 平面図</button>
   <button class="tab-btn haisen" data-tab="haisen">★ ④ 配線ルート図</button>
@@ -681,8 +931,66 @@
   <button class="tab-btn" data-tab="result">⑦ 判定結果</button>
 </div>
 
+<!-- 🤖 AI解析 -->
+<div class="panel active" id="panel-ai">
+  <div class="ai-section">
+    <h3><span class="step-num">1</span>Gemini API キー設定</h3>
+    <div class="api-key-input">
+      <input type="password" id="api-key" placeholder="AIzaSy... （APIキーを貼り付け）" autocomplete="off">
+      <button class="link-btn" id="show-key-btn">👁 表示</button>
+      <button class="link-btn" id="clear-key-btn">🗑 削除</button>
+    </div>
+    <div class="muted-small" style="margin-top:6px">
+      未取得の方は <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a> から無料で取得できます（要Googleアカウント）。
+    </div>
+    <div class="privacy-notice">
+      🔒 <strong>プライバシー</strong>：APIキーはお使いのブラウザの localStorage にのみ保存されます。GitHubや本ツール開発者には一切送信されません。Geminiへのリクエストはブラウザから直接送信されます。
+    </div>
+    <div style="margin-top:12px">
+      <label class="muted-small">使用モデル</label>
+      <select id="model-select" style="width:100%; padding:8px 10px; border:1px solid var(--color-border); border-radius:6px; font-family:inherit; font-size:13px; margin-top:4px">
+        <option value="gemini-2.5-flash">gemini-2.5-flash（推奨・高速安価 / 1案件¥1〜5）</option>
+        <option value="gemini-2.5-pro">gemini-2.5-pro（高精度 / 1案件¥20〜80）</option>
+        <option value="gemini-2.0-flash">gemini-2.0-flash（代替）</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="ai-section">
+    <h3><span class="step-num">2</span>資料アップロード（PDF / 画像）</h3>
+    <div class="upload-zone" id="upload-zone">
+      <div class="upload-icon">📁</div>
+      <div class="upload-main">ラフ図・現調報告書・要部写真をドラッグ&ドロップ</div>
+      <div class="upload-sub">または クリックでファイル選択（PDF / JPG / PNG / WEBP / 最大30MB合計）</div>
+      <input type="file" id="file-input" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none">
+    </div>
+    <div class="file-list" id="file-list"></div>
+  </div>
+
+  <div class="ai-section">
+    <h3><span class="step-num">3</span>AI解析を実行</h3>
+    <div class="muted-small">
+      Gemini が添付資料を解析し、全70+項目に対して ✅OK / ⚠️一部 / ❌不備 / －該当なし を自動判定します。
+      判定根拠は各項目の備考欄に自動記入されます。<strong>適用前にプレビューで確認できます</strong>。
+    </div>
+    <button class="analyze-btn" id="analyze-btn">🤖 AI解析を実行（70+項目を自動判定）</button>
+    <div id="analyze-status"></div>
+    <div id="analyze-result"></div>
+  </div>
+
+  <div class="ai-section" style="background:#fefce8; border-color:#fde047">
+    <h3 style="color:#854d0e">⚠️ 利用上の注意</h3>
+    <ul style="margin:0; padding-left:18px; font-size:12px; color:#713f12">
+      <li>AI判定は<strong>あくまで一次スクリーニング</strong>です。最終判断は必ず人手で確認してください。</li>
+      <li>機密情報（顧客名・住所・写真等）を含む資料を送る場合は、社内ポリシーをご確認ください。Geminiへの送信内容はGoogleの<a href="https://ai.google.dev/gemini-api/terms" target="_blank">利用規約</a>に従って扱われます。</li>
+      <li>AIが判定した項目には「🤖 AI」バッジが表示されます。手動で再判定すれば上書きできます。</li>
+      <li>大きいPDFは1〜3分かかる場合があります。</li>
+    </ul>
+  </div>
+</div>
+
 <!-- ① 資料受領 -->
-<div class="panel active" id="panel-materials">
+<div class="panel" id="panel-materials">
   <div class="section-card">
     <h3>受領資料の有無 <span class="badge">必須</span></h3>
     <div class="desc">作図に必要な3点セット（ラフ図・現地調査報告書・要部写真）が揃っているか確認します。</div>
@@ -1006,8 +1314,11 @@ let state = loadState() || {
   notes: {},       // { itemId: 'note text' }
   routes: [],
   cost: { cap: 3500000, estimate: 0, warnPct: 80 },
-  comment: ''
+  comment: '',
+  aiSources: {},   // { itemId: { model, confidence, at } } AI判定の出所
+  aiAnalyzedAt: null
 };
+if (!state.aiSources) state.aiSources = {};
 
 function loadState() {
   try {
@@ -1039,10 +1350,12 @@ function renderCheckList(containerId, items) {
     const importanceClass = item.haisen ? 'haisen' : '';
     const judgement = state.judgements[item.id] || '';
     const note = state.notes[item.id] || '';
+    const aiSource = state.aiSources && state.aiSources[item.id];
+    const aiBadge = aiSource ? `<span class="ai-source-badge" title="${aiSource.model} 信頼度${(aiSource.confidence*100).toFixed(0)}%">🤖 AI</span>` : '';
 
     wrap.innerHTML = `
       <div class="item-text">
-        <span class="important ${importanceClass}">${importanceLabel}</span>
+        ${aiBadge}<span class="important ${importanceClass}">${importanceLabel}</span>
         ${item.text}
         ${item.hint ? `<span class="hint">💡 ${item.hint}</span>` : ''}
       </div>
@@ -1063,6 +1376,10 @@ function renderCheckList(containerId, items) {
           delete state.judgements[item.id];
         } else {
           state.judgements[item.id] = v;
+        }
+        // 手動操作したらAI出所バッジを外す
+        if (state.aiSources && state.aiSources[item.id]) {
+          delete state.aiSources[item.id];
         }
         renderCheckList(containerId, items);
         updateScores();
@@ -1499,6 +1816,8 @@ window.handleLoad = function(e) {
       if (data.routes) state.routes = data.routes;
       if (data.cost) state.cost = data.cost;
       if (data.comment !== undefined) state.comment = data.comment;
+      if (data.aiSources) state.aiSources = data.aiSources;
+      if (data.aiAnalyzedAt) state.aiAnalyzedAt = data.aiAnalyzedAt;
       saveState();
       restoreUI();
       toast('JSONを読み込みました');
@@ -1510,8 +1829,12 @@ window.handleLoad = function(e) {
 };
 
 function resetAll() {
-  if (!confirm('全ての入力をリセットします。よろしいですか？')) return;
-  state = { project: {}, judgements: {}, notes: {}, routes: [], cost: { cap: 3500000, estimate: 0, warnPct: 80 }, comment: '' };
+  if (!confirm('全ての入力（チェック結果・案件情報・配線長等）をリセットします。\n※APIキーとアップロード済みファイルはそのまま残ります。\nよろしいですか？')) return;
+  state = {
+    project: {}, judgements: {}, notes: {}, routes: [],
+    cost: { cap: 3500000, estimate: 0, warnPct: 80 },
+    comment: '', aiSources: {}, aiAnalyzedAt: null
+  };
   saveState();
   restoreUI();
   toast('リセットしました');
@@ -1539,6 +1862,444 @@ function restoreUI() {
   updateCost();
   updateScores();
 }
+
+// =========================================================================
+// AI解析（Gemini API）
+// =========================================================================
+let aiFiles = [];        // メモリ内のみ。localStorageには保存しない（サイズ問題）
+let lastAIResult = null; // 直近の解析結果（適用前プレビュー用）
+
+// --- APIキー / モデル管理（mainstateとは別keyに保管。export漏洩防止） ---
+function getApiKey() { return localStorage.getItem('gemini_api_key_v1') || ''; }
+function setApiKey(k) {
+  if (k) localStorage.setItem('gemini_api_key_v1', k);
+  else localStorage.removeItem('gemini_api_key_v1');
+}
+function getModel() { return localStorage.getItem('gemini_model_v1') || 'gemini-2.5-flash'; }
+function setModel(m) { localStorage.setItem('gemini_model_v1', m); }
+
+// --- 価格表（USD per 1M tokens, 概算） ---
+const GEMINI_PRICING = {
+  'gemini-2.5-flash':  { in: 0.075, out: 0.30 },
+  'gemini-2.5-pro':    { in: 1.25,  out: 10.0 },
+  'gemini-2.0-flash':  { in: 0.075, out: 0.30 }
+};
+const USD_TO_JPY = 155;
+function estimateCostJPY(model, inputTokens, outputTokens) {
+  const p = GEMINI_PRICING[model] || GEMINI_PRICING['gemini-2.5-flash'];
+  const inUSD = (inputTokens / 1_000_000) * p.in;
+  const outUSD = (outputTokens / 1_000_000) * p.out;
+  return Math.round((inUSD + outUSD) * USD_TO_JPY * 100) / 100;
+}
+
+// --- ファイル → base64 ---
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// --- ファイルリスト描画 ---
+function renderFileList() {
+  const list = document.getElementById('file-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (aiFiles.length === 0) {
+    list.innerHTML = '<div class="muted-small" style="text-align:center;padding:8px">ファイル未選択</div>';
+    return;
+  }
+  let totalSize = 0;
+  aiFiles.forEach((f, i) => {
+    totalSize += f.size;
+    const sizeMB = (f.size / 1024 / 1024).toFixed(2);
+    const card = document.createElement('div');
+    card.className = 'file-card';
+    let thumb;
+    if (f.type.startsWith('image/')) {
+      thumb = `<img src="data:${f.type};base64,${f.base64}" class="thumb" alt="">`;
+    } else {
+      thumb = `<div class="thumb-icon">📄</div>`;
+    }
+    card.innerHTML = `
+      ${thumb}
+      <div class="file-info">
+        <div class="file-name">${escape(f.name)}</div>
+        <div class="file-meta">${f.type.split('/')[1].toUpperCase()} ・ ${sizeMB}MB</div>
+      </div>
+      <button class="del-btn" onclick="removeAIFile(${i})" title="削除">×</button>
+    `;
+    list.appendChild(card);
+  });
+  const summary = document.createElement('div');
+  summary.className = 'file-summary';
+  summary.textContent = `${aiFiles.length}ファイル / 合計 ${(totalSize/1024/1024).toFixed(2)}MB`;
+  list.appendChild(summary);
+}
+
+window.removeAIFile = function(idx) {
+  aiFiles.splice(idx, 1);
+  renderFileList();
+};
+
+// --- ファイル追加 ---
+async function addAIFiles(files) {
+  let totalAfter = aiFiles.reduce((s, f) => s + f.size, 0);
+  for (const f of files) {
+    if (!f.type.match(/^(application\/pdf|image\/)/)) {
+      toast(`${f.name} は対応外形式です`);
+      continue;
+    }
+    if (totalAfter + f.size > 30 * 1024 * 1024) {
+      toast('合計30MBを超えるためスキップしました');
+      break;
+    }
+    try {
+      const base64 = await fileToBase64(f);
+      aiFiles.push({ file: f, name: f.name, type: f.type, size: f.size, base64 });
+      totalAfter += f.size;
+    } catch (e) {
+      toast(`${f.name} の読込に失敗`);
+    }
+  }
+  renderFileList();
+}
+
+// --- ドラッグ&ドロップ・ファイル選択 ---
+function setupAIUpload() {
+  const zone = document.getElementById('upload-zone');
+  const input = document.getElementById('file-input');
+  if (!zone || !input) return;
+
+  zone.addEventListener('click', e => {
+    if (e.target === zone || e.target.closest('.upload-icon, .upload-main, .upload-sub')) {
+      input.click();
+    }
+  });
+  input.addEventListener('change', e => {
+    addAIFiles(Array.from(e.target.files));
+    input.value = '';
+  });
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    addAIFiles(Array.from(e.dataTransfer.files));
+  });
+}
+
+// --- APIキー / モデル UI ---
+function setupAISettings() {
+  const keyInput = document.getElementById('api-key');
+  const showBtn = document.getElementById('show-key-btn');
+  const clearBtn = document.getElementById('clear-key-btn');
+  const modelSelect = document.getElementById('model-select');
+  if (!keyInput || !modelSelect) return;
+
+  keyInput.value = getApiKey();
+  modelSelect.value = getModel();
+
+  keyInput.addEventListener('input', () => setApiKey(keyInput.value.trim()));
+  modelSelect.addEventListener('change', () => setModel(modelSelect.value));
+  showBtn.addEventListener('click', () => {
+    keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
+    showBtn.textContent = keyInput.type === 'password' ? '👁 表示' : '🙈 隠す';
+  });
+  clearBtn.addEventListener('click', () => {
+    if (confirm('APIキーを削除します。よろしいですか？')) {
+      setApiKey('');
+      keyInput.value = '';
+      toast('APIキーを削除しました');
+    }
+  });
+}
+
+// --- 解析プロンプト構築 ---
+function buildAnalysisPrompt() {
+  const proj = state.project;
+  const checkItems = {};
+  for (const sec of Object.keys(CHECK_ITEMS)) {
+    checkItems[sec] = CHECK_ITEMS[sec].map(item => ({
+      id: item.id,
+      text: item.text,
+      hint: item.hint,
+      importance: item.importance,
+      ...(item.haisen ? { haisen: true } : {})
+    }));
+  }
+  const totalItems = Object.values(CHECK_ITEMS).flat().length;
+
+  return `あなたはEV充電設備 補助金申請用の図面作成センター（NEV審査基準準拠）の経験豊富な審査担当者です。
+工事会社が作成した「ラフ図・現地調査報告書・要部写真」（添付ファイル群）をもとに、
+作図センターで補助金申請用図面（設置場所見取図／平面図／配線ルート図／電気系統図）を
+正確に作図できるレベルかを項目ごとに厳格に判定してください。
+
+【案件情報】
+- 工事種別: ${proj.proj_type || '未指定'}
+- 充電設備: ${proj.proj_charger || '未指定'} × ${proj.proj_count || '?'}基
+- 引込種別: ${proj.proj_intake || '未指定'}
+- 案件名: ${proj.proj_name || '未指定'}
+
+【判定区分】
+- "ok": 添付資料に必要情報が明確に記載されており、CADで作図可能なレベル
+- "warn": 部分的な情報はあるが、追加確認・聴取が必要
+- "ng": 必要情報が見当たらず、現状では作図不可（差戻し対象）
+- "na": 工事種別から本項目は該当しない（例：新設なら既設充電設備関連は不要）
+
+【特記事項】
+- 配線ルート図（haisen項目）は補助金申請の最重要図面です。電源元から充電器までのルート追跡可能性、各区間の長さ、線種・配管種別、配線方法（露出/埋設/架空）の明示を厳格に判定してください。
+- "evidence" には、添付資料のどこ（例：ラフ図のどの部分／写真n枚目／現調報告書のどの欄）から判断したかを具体的に記述してください。情報がない場合は「該当記載なし」と明記してください。
+- "note" には、不足している情報や工事会社への申し送り事項を記載してください。
+- "confidence" は 0.0〜1.0 で、判断の確信度を表してください。手書きで読みづらい等の場合は低めにしてください。
+
+【チェック項目（全${totalItems}項目）】
+${JSON.stringify(checkItems, null, 2)}
+
+すべての項目（id付き）について、もれなく判定を返してください。`;
+}
+
+// --- Gemini API 呼び出し ---
+async function callGemini() {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('APIキーが未設定です');
+  if (aiFiles.length === 0) throw new Error('解析するファイルが未選択です');
+
+  const model = getModel();
+  const prompt = buildAnalysisPrompt();
+
+  const parts = [{ text: prompt }];
+  for (const f of aiFiles) {
+    parts.push({
+      inlineData: {
+        mimeType: f.type,
+        data: f.base64
+      }
+    });
+  }
+
+  const responseSchema = {
+    type: "object",
+    properties: {
+      results: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id:         { type: "string",  description: "項目ID（例: ha01）" },
+            judgement:  { type: "string",  enum: ["ok", "warn", "ng", "na"] },
+            confidence: { type: "number",  description: "信頼度 0.0-1.0" },
+            evidence:   { type: "string",  description: "添付資料のどこから判断したか" },
+            note:       { type: "string",  description: "備考・申し送り事項" }
+          },
+          required: ["id", "judgement", "confidence", "evidence", "note"]
+        }
+      }
+    },
+    required: ["results"]
+  };
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const body = {
+    contents: [{ parts }],
+    generationConfig: {
+      temperature: 0.1,
+      responseMimeType: "application/json",
+      responseSchema: responseSchema
+    }
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    let errMsg = `${res.status} ${res.statusText}`;
+    try {
+      const err = await res.json();
+      errMsg = err.error?.message || errMsg;
+    } catch(_) {}
+    throw new Error(`Gemini API: ${errMsg}`);
+  }
+  return await res.json();
+}
+
+// --- 解析実行 ---
+async function runAIAnalysis() {
+  const btn = document.getElementById('analyze-btn');
+  const status = document.getElementById('analyze-status');
+  const resultEl = document.getElementById('analyze-result');
+
+  if (!getApiKey()) { toast('APIキーを設定してください'); return; }
+  if (aiFiles.length === 0) { toast('ファイルをアップロードしてください'); return; }
+
+  btn.disabled = true;
+  status.innerHTML = `
+    <div class="progress">
+      <div class="spinner"></div>
+      <div>
+        <div>Gemini に問い合わせ中...</div>
+        <div class="muted-small"><span id="elapsed">0</span> 秒経過 ・ 大きいPDFは1〜3分かかる場合があります</div>
+      </div>
+    </div>`;
+  resultEl.innerHTML = '';
+
+  const startTime = Date.now();
+  const interval = setInterval(() => {
+    const e = Math.round((Date.now() - startTime) / 1000);
+    const el = document.getElementById('elapsed');
+    if (el) el.textContent = e;
+  }, 500);
+
+  try {
+    const data = await callGemini();
+    clearInterval(interval);
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('AIからのレスポンスが空です（コンテンツポリシーで遮断された可能性）');
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      throw new Error('AIレスポンスのJSONパース失敗: ' + e.message);
+    }
+    const results = parsed.results || [];
+    if (!Array.isArray(results) || results.length === 0) {
+      throw new Error('AIから有効な判定結果が得られませんでした');
+    }
+
+    const usage = data.usageMetadata || {};
+    const inputTokens = usage.promptTokenCount || 0;
+    const outputTokens = usage.candidatesTokenCount || 0;
+    const totalTokens = usage.totalTokenCount || (inputTokens + outputTokens);
+    const model = getModel();
+    const cost = estimateCostJPY(model, inputTokens, outputTokens);
+
+    lastAIResult = { results, model, inputTokens, outputTokens, totalTokens, cost, at: new Date().toISOString() };
+
+    const counts = { ok: 0, warn: 0, ng: 0, na: 0 };
+    results.forEach(r => { counts[r.judgement] = (counts[r.judgement] || 0) + 1; });
+
+    // 既知のID外を除外
+    const validIds = new Set(Object.values(CHECK_ITEMS).flat().map(i => i.id));
+    const matched = results.filter(r => validIds.has(r.id));
+    const unmatched = results.length - matched.length;
+
+    status.innerHTML = '';
+    resultEl.innerHTML = `
+      <div class="ai-result-summary">
+        <h4>🤖 AI解析結果（${escape(model)}）</h4>
+        <div class="result-summary-grid">
+          <div><span class="muted-small">判定済</span><br><strong>${matched.length}</strong> / ${validIds.size}項目</div>
+          <div><span class="dot ok"></span>OK<br><strong>${counts.ok || 0}</strong></div>
+          <div><span class="dot warn"></span>要確認<br><strong>${counts.warn || 0}</strong></div>
+          <div><span class="dot ng"></span>不備<br><strong>${counts.ng || 0}</strong></div>
+          <div><span class="dot na"></span>該当なし<br><strong>${counts.na || 0}</strong></div>
+        </div>
+        ${unmatched > 0 ? `<div class="muted-small" style="color:var(--color-warn)">⚠️ ${unmatched}件は既知の項目IDと一致しないため除外</div>` : ''}
+        <div class="cost-block">
+          <span class="muted-small">入力 ${inputTokens.toLocaleString()} tok / 出力 ${outputTokens.toLocaleString()} tok ・ 推定コスト</span>
+          <strong>¥${cost.toFixed(2)}</strong>
+        </div>
+        <div class="action-bar">
+          <button class="btn primary" onclick="applyLastAI()">✅ チェックリストに適用</button>
+          <button class="btn" onclick="toggleAIDetails()">📋 項目別判定を表示/隠す</button>
+          <button class="btn" onclick="discardAI()">破棄</button>
+        </div>
+        <div id="ai-details" style="margin-top:12px; display:none"></div>
+      </div>`;
+
+    toast(`解析完了（${matched.length}項目）`);
+  } catch (err) {
+    clearInterval(interval);
+    status.innerHTML = `<div class="cost-alert danger" style="margin-top:10px">❌ <strong>エラー</strong>: ${escape(err.message)}</div>`;
+    toast('エラー: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+window.applyLastAI = function() {
+  if (!lastAIResult) return;
+  const validIds = new Set(Object.values(CHECK_ITEMS).flat().map(i => i.id));
+  let count = 0;
+  state.aiSources = state.aiSources || {};
+  lastAIResult.results.forEach(r => {
+    if (!validIds.has(r.id)) return;
+    state.judgements[r.id] = r.judgement;
+    state.aiSources[r.id] = {
+      model: lastAIResult.model,
+      confidence: r.confidence,
+      at: lastAIResult.at
+    };
+    const aiText = `[🤖 ${lastAIResult.model} / 信頼度 ${(r.confidence*100).toFixed(0)}%]\n根拠: ${r.evidence}`;
+    state.notes[r.id] = aiText + (r.note ? `\n申し送り: ${r.note}` : '');
+    count++;
+  });
+  state.aiAnalyzedAt = lastAIResult.at;
+  saveState();
+  restoreUI();
+  toast(`${count}項目をチェックリストに反映しました`);
+  // 結果のbtnセクションを変えてあるので再レンダ
+  document.getElementById('analyze-result').innerHTML += `
+    <div style="margin-top:10px; padding:10px; background:#ecfdf5; border-radius:6px; color:#065f46; font-size:12px">
+      ✅ 反映完了。各タブを開くと AI判定済み項目に <span class="ai-source-badge">🤖 AI</span> バッジが表示されます。
+    </div>`;
+};
+
+window.discardAI = function() {
+  lastAIResult = null;
+  document.getElementById('analyze-result').innerHTML = '';
+  toast('結果を破棄しました');
+};
+
+window.toggleAIDetails = function() {
+  if (!lastAIResult) return;
+  const el = document.getElementById('ai-details');
+  if (!el) return;
+  if (el.style.display === 'none' || !el.innerHTML) {
+    el.style.display = 'block';
+    const groups = {};
+    lastAIResult.results.forEach(r => {
+      const sec = Object.keys(CHECK_ITEMS).find(k => CHECK_ITEMS[k].some(i => i.id === r.id));
+      if (!sec) return;
+      const item = CHECK_ITEMS[sec].find(i => i.id === r.id);
+      if (!groups[sec]) groups[sec] = [];
+      groups[sec].push({ ...r, text: item.text, importance: item.importance, haisen: item.haisen });
+    });
+    let html = '';
+    for (const sec of Object.keys(groups)) {
+      const isHaisen = sec === 'haisen';
+      html += `<details ${isHaisen ? 'open' : ''}><summary><strong>${sectionLabel(sec)}</strong> （${groups[sec].length}項目）${isHaisen ? ' ★最重要' : ''}</summary>`;
+      for (const r of groups[sec]) {
+        html += `<div class="ai-detail-item" style="border-left-color:${{ok:'#16a34a',warn:'#f59e0b',ng:'#dc2626',na:'#94a3b8'}[r.judgement]||'#ccc'}">
+          <div><span class="dot ${r.judgement}"></span><strong>[${r.id}]</strong> ${escape(r.text)}</div>
+          <div class="muted-small">信頼度: ${(r.confidence*100).toFixed(0)}%</div>
+          <div class="muted-small">根拠: ${escape(r.evidence)}</div>
+          ${r.note ? `<div class="muted-small">備考: ${escape(r.note)}</div>` : ''}
+        </div>`;
+      }
+      html += '</details>';
+    }
+    el.innerHTML = html;
+  } else {
+    el.style.display = 'none';
+  }
+};
+
+// 解析ボタン配線
+document.addEventListener('DOMContentLoaded', () => {});
+const _analyzeBtn = document.getElementById('analyze-btn');
+if (_analyzeBtn) _analyzeBtn.addEventListener('click', runAIAnalysis);
+
+// 初期セットアップ
+setupAISettings();
+setupAIUpload();
+renderFileList();
 
 // =========================================================================
 // 初期化
