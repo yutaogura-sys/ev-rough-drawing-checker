@@ -799,6 +799,24 @@
   .dot.ng { background: var(--color-ng); }
   .dot.na { background: var(--color-na); }
 
+  /* 判定ラベル（色＋テキスト併記） */
+  .judge-label {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-right: 8px;
+    vertical-align: middle;
+    border: 1px solid;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .judge-label.ok   { background: #ecfdf5; color: #065f46; border-color: var(--color-ok); }
+  .judge-label.warn { background: #fffbeb; color: #92400e; border-color: var(--color-warn); }
+  .judge-label.ng   { background: #fef2f2; color: #991b1b; border-color: var(--color-ng); }
+  .judge-label.na   { background: #f1f5f9; color: #475569; border-color: var(--color-na); }
+
   .cost-block {
     display: flex;
     justify-content: space-between;
@@ -2293,13 +2311,22 @@ window.toggleAIDetails = function() {
       if (!groups[sec]) groups[sec] = [];
       groups[sec].push({ ...r, text: item.text, importance: item.importance, haisen: item.haisen });
     });
+    const JUDGE_LABEL = {
+      ok:   '✅ OK',
+      warn: '⚠️ 要確認',
+      ng:   '❌ 不備',
+      na:   '— 該当なし'
+    };
+    const BORDER_COLOR = { ok: '#16a34a', warn: '#f59e0b', ng: '#dc2626', na: '#94a3b8' };
+
     let html = '';
     for (const sec of Object.keys(groups)) {
       const isHaisen = sec === 'haisen';
       html += `<details ${isHaisen ? 'open' : ''}><summary><strong>${sectionLabel(sec)}</strong> （${groups[sec].length}項目）${isHaisen ? ' ★最重要' : ''}</summary>`;
       for (const r of groups[sec]) {
-        html += `<div class="ai-detail-item" style="border-left-color:${{ok:'#16a34a',warn:'#f59e0b',ng:'#dc2626',na:'#94a3b8'}[r.judgement]||'#ccc'}">
-          <div><span class="dot ${r.judgement}"></span><strong>[${r.id}]</strong> ${escape(r.text)}</div>
+        const label = JUDGE_LABEL[r.judgement] || r.judgement;
+        html += `<div class="ai-detail-item" style="border-left-color:${BORDER_COLOR[r.judgement] || '#ccc'}">
+          <div><span class="judge-label ${r.judgement}">${label}</span><strong>[${r.id}]</strong> ${escape(r.text)}</div>
           <div class="muted-small">信頼度: ${(r.confidence*100).toFixed(0)}%</div>
           <div class="muted-small">根拠: ${escape(r.evidence)}</div>
           ${r.note ? `<div class="muted-small">備考: ${escape(r.note)}</div>` : ''}
