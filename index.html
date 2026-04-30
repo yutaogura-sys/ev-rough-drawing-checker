@@ -1150,7 +1150,8 @@
   </div>
 
   <div class="action-bar">
-    <button class="btn primary" onclick="downloadReport()">📄 レポートをダウンロード（JSON）</button>
+    <button class="btn success" onclick="exportExcel(event)">📊 Excelで出力（.xlsx）</button>
+    <button class="btn primary" onclick="downloadReport()">📄 JSONでダウンロード</button>
     <button class="btn" onclick="window.print()">🖨️ 印刷 / PDF保存</button>
     <button class="btn" onclick="exportText()">📋 テキストでコピー</button>
     <button class="btn danger" onclick="resetAll()">🗑️ 入力をリセット</button>
@@ -1749,6 +1750,237 @@ document.querySelectorAll('.tab-btn').forEach(b => {
 // =========================================================================
 // レポート出力
 // =========================================================================
+// =========================================================================
+// Excel(.xlsx) 出力
+// =========================================================================
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[data-src="${src}"]`)) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src;
+    s.dataset.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('スクリプト読込失敗: ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+async function exportExcel(ev) {
+  const btn = ev?.target;
+  const orig = btn ? btn.textContent : null;
+  if (btn) { btn.disabled = true; btn.textContent = '📊 Excel生成中...'; }
+
+  try {
+    if (!window.XLSX) {
+      await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+      if (!window.XLSX) throw new Error('SheetJS の読込に失敗しました（オフラインの可能性）');
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: サマリ
+    const ws1 = XLSX.utils.aoa_to_sheet(buildSummaryRows());
+    ws1['!cols'] = [{ wch: 24 }, { wch: 50 }];
+    XLSX.utils.book_append_sheet(wb, ws1, 'サマリ');
+
+    // Sheet 2: 項目別判定
+    const ws2 = XLSX.utils.aoa_to_sheet(buildItemsRows());
+    ws2['!cols'] = [
+      { wch: 14 }, { wch: 6 }, { wch: 6 }, { wch: 5 }, { wch: 50 },
+      { wch: 6 }, { wch: 12 }, { wch: 18 }, { wch: 8 }, { wch: 50 }, { wch: 50 }
+    ];
+    ws2['!freeze'] = { xSplit: 0, ySplit: 1 }; // ヘッダ固定（一部Excelで効く）
+    XLSX.utils.book_append_sheet(wb, ws2, '項目別判定');
+
+    // Sheet 3: 配線長算定
+    const ws3 = XLSX.utils.aoa_to_sheet(buildRoutesRows());
+    ws3['!cols'] = [
+      { wch: 28 }, { wch: 20 }, { wch: 18 }, { wch: 14 },
+      { wch: 10 }, { wch: 10 }, { wch: 28 }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws3, '配線長算定');
+
+    // Sheet 4: 指摘事項
+    const ws4 = XLSX.utils.aoa_to_sheet(buildIssuesRows());
+    ws4['!cols'] = [{ wch: 16 }, { wch: 12 }, { wch: 5 }, { wch: 50 }, { wch: 50 }];
+    XLSX.utils.book_append_sheet(wb, ws4, '指摘事項');
+
+    const projName = (state.project.proj_name || 'ラフ図チェック').replace(/[\\\/:*?"<>|]/g, '_');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `${projName}_ラフ図チェック_${dateStr}.xlsx`);
+    toast('Excelをダウンロードしました（4シート）');
+  } catch (err) {
+    console.error(err);
+    toast('Excel出力エラー: ' + err.message);
+    alert('Excel出力に失敗しました：\n' + err.message + '\n\nオフラインの場合、初回のみネットワーク接続が必要です。');
+  } finally {
+    if (btn && orig) { btn.disabled = false; btn.textContent = orig; }
+  }
+}
+
+const SEC_LABELS = { materials: '資料受領', mitori: '設置場所見取図', heimen: '平面図', haisen: '配線ルート図★', keitou: '電気系統図' };
+const IMP_LABELS = { critical: '必須', high: '重要', medium: '通常', low: '付加' };
+const J_LABELS   = { ok: '✅ OK', warn: '⚠️ 要確認', ng: '❌ 不備', na: '— 該当なし' };
+
+function buildSummaryRows() {
+  const judgement = document.getElementById('judgementPill').textContent;
+  const totalScore = document.getElementById('totalScore').textContent;
+  const haisenScore = document.getElementById('haisenScore').textContent;
+
+  const rows = [
+    ['ラフ図チェックツール 判定結果'],
+    ['出力日時', new Date().toLocaleString('ja-JP')],
+    [],
+    ['【案件情報】'],
+    ['案件名', state.project.proj_name || '-'],
+    ['施設住所', state.project.proj_address || '-'],
+    ['工事会社', state.project.proj_contractor || '-'],
+    ['確認者', state.project.proj_checker || '-'],
+    ['確認日', state.project.proj_date || '-'],
+    ['工事種別', state.project.proj_type || '-'],
+    ['充電設備', (state.project.proj_charger || '-') + ' × ' + (state.project.proj_count || '-') + '基'],
+    ['引込種別', state.project.proj_intake || '-'],
+    [],
+    ['【総合判定】'],
+    ['総合スコア', totalScore + '%'],
+    ['配線ルート図スコア ★', haisenScore + '%'],
+    ['判定', judgement],
+    [],
+    ['【セクション別スコア】']
+  ];
+
+  const sections = ['materials', 'mitori', 'heimen', 'haisen', 'keitou'];
+  for (const key of sections) {
+    const score = calcSectionScore(CHECK_ITEMS[key]);
+    rows.push([SEC_LABELS[key], score.pct + '%']);
+  }
+
+  rows.push([]);
+  rows.push(['【補助金料金監視】']);
+  rows.push(['補助金上限', '¥' + (state.cost.cap || 0).toLocaleString()]);
+  rows.push(['想定工事費', '¥' + (state.cost.estimate || 0).toLocaleString()]);
+  if (state.cost.cap > 0) {
+    const pct = (state.cost.estimate || 0) / state.cost.cap * 100;
+    rows.push(['使用率', pct.toFixed(1) + '%']);
+    if ((state.cost.estimate || 0) > state.cost.cap) {
+      rows.push(['超過額', '¥' + ((state.cost.estimate || 0) - state.cost.cap).toLocaleString()]);
+    }
+  }
+
+  if (state.aiAnalyzedAt) {
+    rows.push([]);
+    rows.push(['【AI解析】']);
+    rows.push(['解析日時', new Date(state.aiAnalyzedAt).toLocaleString('ja-JP')]);
+    rows.push(['AI判定済み項目数', Object.keys(state.aiSources || {}).length]);
+  }
+
+  if (state.comment) {
+    rows.push([]);
+    rows.push(['【確認者総評】']);
+    rows.push([state.comment]);
+  }
+
+  return rows;
+}
+
+function buildItemsRows() {
+  const rows = [
+    ['セクション', 'ID', '重要度', '★配線', '項目', '判定', '判定詳細', 'AI判定モデル', '信頼度', 'AI根拠', '備考']
+  ];
+  for (const sec of Object.keys(CHECK_ITEMS)) {
+    for (const item of CHECK_ITEMS[sec]) {
+      const j = state.judgements[item.id];
+      const ai = state.aiSources && state.aiSources[item.id];
+      const fullNote = state.notes[item.id] || '';
+
+      // ノートに含まれるAI根拠と申し送りを分離
+      let aiEvidence = '';
+      let userNote = fullNote;
+      if (ai && fullNote.startsWith('[🤖')) {
+        const eMatch = fullNote.match(/根拠:\s*([\s\S]*?)(?:\n申し送り:|$)/);
+        if (eMatch) aiEvidence = eMatch[1].trim();
+        const nMatch = fullNote.match(/\n申し送り:\s*([\s\S]+)$/);
+        userNote = nMatch ? nMatch[1].trim() : '';
+      }
+
+      rows.push([
+        SEC_LABELS[sec] || sec,
+        item.id,
+        IMP_LABELS[item.importance] || item.importance,
+        item.haisen ? '★' : '',
+        item.text,
+        j || '',
+        j ? J_LABELS[j] : '未判定',
+        ai ? ai.model : '',
+        ai ? (ai.confidence * 100).toFixed(0) + '%' : '',
+        aiEvidence,
+        userNote
+      ]);
+    }
+  }
+  return rows;
+}
+
+function buildRoutesRows() {
+  const rows = [
+    ['区間', '線種', '配管', '配線方法', '長さ(m)', '標準値(m)', '判定']
+  ];
+  let total = 0, stdTotal = 0;
+  for (const r of (state.routes || [])) {
+    const len = parseFloat(r.length) || 0;
+    const std = parseFloat(r.std) || 0;
+    total += len;
+    stdTotal += std;
+    let judge = '—';
+    if (std > 0 && len > 0) {
+      const ratio = len / std;
+      if (ratio > 1.5) judge = `⚠️ 標準値の${(ratio*100).toFixed(0)}% (過度な余長の疑い)`;
+      else if (ratio > 1.2) judge = `△ 標準値の${(ratio*100).toFixed(0)}% (要確認)`;
+      else judge = '✅ 標準値内';
+    } else if (std === 0 && len > 0) {
+      judge = '現調実測（数量上限なし）';
+    }
+    rows.push([
+      r.label || '',
+      r.cable || '',
+      r.conduit || '',
+      r.method || '',
+      len,
+      std,
+      judge
+    ]);
+  }
+  rows.push([]);
+  rows.push(['合計', '', '', '', total, stdTotal, '']);
+  return rows;
+}
+
+function buildIssuesRows() {
+  const rows = [
+    ['セクション', 'severity', '★配線', '項目', '備考']
+  ];
+  let count = 0;
+  for (const sec of Object.keys(CHECK_ITEMS)) {
+    for (const item of CHECK_ITEMS[sec]) {
+      const j = state.judgements[item.id];
+      if (j === 'ng' || j === 'warn') {
+        rows.push([
+          SEC_LABELS[sec] || sec,
+          j === 'ng' ? '❌ 差戻し' : '⚠️ 要確認',
+          item.haisen ? '★' : '',
+          item.text,
+          state.notes[item.id] || ''
+        ]);
+        count++;
+      }
+    }
+  }
+  if (count === 0) {
+    rows.push(['指摘事項なし', '', '', '', '']);
+  }
+  return rows;
+}
+
 function downloadReport() {
   const data = {
     tool: 'ラフ図チェックツール',
